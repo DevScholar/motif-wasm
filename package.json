@@ -1,0 +1,23 @@
+{
+  "name": "@devscholar/motif-wasm",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Motif (libXm) compiled to WebAssembly via em-x11. Includes the classic Periodic Table of Widgets demo.",
+  "type": "module",
+  "license": "LGPL-2.1",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "bash scripts/build.sh Release",
+    "build:debug": "bash scripts/build.sh Debug",
+    "dev": "vite",
+    "preview": "vite preview",
+    "clean": "rimraf build"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.5",
+    "vite": "^5.2.0"
+  }
+}
