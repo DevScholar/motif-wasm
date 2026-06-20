@@ -70,9 +70,16 @@ else
   fi
 fi
 
-# --- Step 3: configure (if stale) ---
+# --- Step 3: build em-x11 default-host IIFE (vite) ---
+# Motif-wasm links this as --pre-js.  If missing, the Host never
+# auto-creates and the demo stays blank (no canvas, no windows).
 
 EM_X11_ABS="$(cd "${EM_X11_SRC:-$REPO_ROOT/../em-x11}" && pwd)"
+
+log "building em-x11-default-host.js..."
+npx vite build -c "$EM_X11_ABS/vite.host.config.ts"
+
+# --- Step 4: configure (if stale) ---
 
 if [ "$STALE" -eq 1 ]; then
   log "reconfiguring cmake ($BUILD_TYPE)..."
@@ -90,7 +97,7 @@ else
   log "cmake cache is up-to-date"
 fi
 
-# --- Step 4: build ---
+# --- Step 5: build ---
 
 log "building..."
 EM_X11_SRC="$EM_X11_ABS" cmake --build "$BUILD_DIR" -j$(nproc)
