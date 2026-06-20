@@ -77,7 +77,7 @@ fi
 EM_X11_ABS="$(cd "${EM_X11_SRC:-$REPO_ROOT/../em-x11}" && pwd)"
 
 log "building em-x11-default-host.js..."
-npx vite build -c "$EM_X11_ABS/vite.host.config.ts"
+( cd "$EM_X11_ABS" && npx vite build -c vite.host.config.ts )
 
 # --- Step 4: configure (if stale) ---
 
