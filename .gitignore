@@ -7,6 +7,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build outputs
+*.uid
 build/
 dist/
 *.tsbuildinfo
