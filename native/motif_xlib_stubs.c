@@ -59,36 +59,6 @@ int XSetCloseDownMode(Display *dpy, int close_mode) {
     return close_mode;
 }
 
-/* ---- Region operations ---- */
-
-Bool XEqualRegion(Region r1, Region r2) {
-    Region tmp1 = XCreateRegion();
-    Region tmp2 = XCreateRegion();
-    XSubtractRegion(r1, r2, tmp1);
-    XSubtractRegion(r2, r1, tmp2);
-    Bool result = XEmptyRegion(tmp1) && XEmptyRegion(tmp2);
-    XDestroyRegion(tmp1);
-    XDestroyRegion(tmp2);
-    return result;
-}
-
-int XOffsetRegion(Region r, int dx, int dy) {
-    /* XOffsetRegion is declared but unimplemented in em-x11. Since Region
-     * is a single bounding rect under the hood, offset is trivially the
-     * union of the old rect shifted by (dx, dy) with itself — but
-     * XUnionRegion with self is a no-op. Instead rebuild via XShrinkRegion.
-     * This is sloppy but correct: a region offset by +dx preserves its size,
-     * so shrink by -dx doesn't exist.
-     *
-     * Real implementation: access the internal bounding rect directly.
-     * We don't have the struct definition here, so we rely on the property
-     * that the downstream Motif code only calls this on small regions for
-     * geometry bookkeeping. For now, return success without moving — the
-     * bounding-rect region model means most callers won't notice. */
-    (void)r; (void)dx; (void)dy;
-    return 1;
-}
-
 /* ---- Color allocation ---- */
 
 Status XAllocColorCells(Display *dpy, Colormap cmap, Bool contig,
