@@ -32,6 +32,7 @@
 
 static Widget status_label = NULL;
 static Widget tab_stack = NULL;
+static Widget radio_value_label = NULL;
 
 /* -- Utility helpers -- */
 
@@ -70,6 +71,11 @@ static void radio_cb(Widget w, XtPointer cd, XtPointer cb) {
   char buf[64];
   snprintf(buf, sizeof(buf), "Radio selected: %s", (const char *)cd);
   status(buf);
+  if (radio_value_label) {
+    XmString xms = XmStringCreateLocalized((char *)cd);
+    XtVaSetValues(radio_value_label, XmNlabelString, xms, NULL);
+    XmStringFree(xms);
+  }
 }
 
 static void list_cb(Widget w, XtPointer cd, XtPointer cb) {
@@ -156,16 +162,27 @@ static Widget add_menu_item(Widget menu, const char *label, char mnemonic,
   return btn;
 }
 
-/* -- Section header: label inside page RowColumn -- */
+/* -- Section header: bold label -- */
 
 static Widget section_label(Widget parent, const char *text) {
+  XmFontList bold_fl = NULL;
+  Widget label;
   XmString xms = XmStringCreateLocalized((char *)text);
-  Widget w = XtVaCreateManagedWidget(text, xmLabelWidgetClass, parent,
-                                     XmNlabelString, xms,
-                                     XmNalignment, XmALIGNMENT_BEGINNING,
-                                     NULL);
+  XmFontListEntry entry = XmFontListEntryLoad(XtDisplayOfObject(parent),
+      "-*-helvetica-bold-r-*-*-12-*-*-*-*-*-*-*",
+      XmFONT_IS_FONT, "bold_tag");
+  if (entry) {
+    bold_fl = XmFontListAppendEntry(NULL, entry);
+    XmFontListEntryFree(&entry);
+  }
+  label = XtVaCreateManagedWidget(text, xmLabelWidgetClass, parent,
+                                   XmNlabelString, xms,
+                                   XmNfontList, bold_fl,
+                                   XmNalignment, XmALIGNMENT_BEGINNING,
+                                   NULL);
+  if (bold_fl) XmFontListFree(bold_fl);
   XmStringFree(xms);
-  return w;
+  return label;
 }
 
 /* -- Helper: create a page with tab label constraint -- */
@@ -189,11 +206,20 @@ static Widget create_page(Widget ts, const char *name, const char *tab_label) {
  * Tab 1 — Buttons
  * ==================================================================== */
 
+/* -- Menubutton popup callback for Auto-save check -- */
+static void mb_autosave_cb(Widget w, XtPointer cd, XtPointer cb) {
+  (void)cb;
+  XmToggleButtonCallbackStruct *cs = (XmToggleButtonCallbackStruct *)cd;
+  char buf[64];
+  snprintf(buf, sizeof(buf), "Auto-save: %s", cs->set ? "ON" : "OFF");
+  status(buf);
+}
+
 static void create_buttons_tab(Widget ts) {
   Widget page = create_page(ts, "buttonsPage", "Buttons");
 
-  /* -- PushButton -- */
-  section_label(page, "PushButton");
+  /* -- Button -- */
+  section_label(page, "Button");
 
   {
     Widget row = XtVaCreateManagedWidget("pbrow", xmRowColumnWidgetClass, page,
@@ -202,7 +228,7 @@ static void create_buttons_tab(Widget ts) {
                                          XmNspacing, 3,
                                          NULL);
     Widget w = XtVaCreateManagedWidget("Normal", xmPushButtonWidgetClass, row, NULL);
-    XtAddCallback(w, XmNactivateCallback, push_cb, "PushButton: Normal");
+    XtAddCallback(w, XmNactivateCallback, push_cb, "Button: Normal");
 
     w = XtVaCreateManagedWidget("Disabled", xmPushButtonWidgetClass, row, NULL);
     XtVaSetValues(w, XmNsensitive, False, NULL);
@@ -211,8 +237,8 @@ static void create_buttons_tab(Widget ts) {
     XtAddCallback(w, XmNactivateCallback, exit_cb, NULL);
   }
 
-  /* -- ToggleButton -- */
-  section_label(page, "ToggleButton");
+  /* -- Checkbutton -- */
+  section_label(page, "Checkbutton");
 
   {
     Widget w = XtVaCreateManagedWidget("Checked by default",
@@ -220,7 +246,7 @@ static void create_buttons_tab(Widget ts) {
                                        XmNset, True,
                                        XmNalignment, XmALIGNMENT_BEGINNING,
                                        NULL);
-    XtAddCallback(w, XmNvalueChangedCallback, toggle_cb, "Checked");
+    XtAddCallback(w, XmNvalueChangedCallback, toggle_cb, "Checked by default");
 
     w = XtVaCreateManagedWidget("Unchecked",
                                 xmToggleButtonWidgetClass, page,
@@ -235,8 +261,8 @@ static void create_buttons_tab(Widget ts) {
                                 NULL);
   }
 
-  /* -- RadioButton (ToggleButton + XmONE_OF_MANY) -- */
-  section_label(page, "RadioButton (ONE_OF_MANY)");
+  /* -- Radiobutton -- */
+  section_label(page, "Radiobutton");
 
   {
     Widget row = XtVaCreateManagedWidget("rrow", xmRowColumnWidgetClass, page,
@@ -259,28 +285,67 @@ static void create_buttons_tab(Widget ts) {
                                 XmNindicatorType, XmONE_OF_MANY,
                                 NULL);
     XtAddCallback(w, XmNvalueChangedCallback, radio_cb, "Rust");
+
+    /* Value display label, like Tk's sunken label showing ::lang */
+    {
+      XmString xms = XmStringCreateLocalized("Tcl");
+      radio_value_label = XtVaCreateManagedWidget("radioValue",
+                                                   xmLabelWidgetClass, page,
+                                                   XmNlabelString, xms,
+                                                   XmNalignment, XmALIGNMENT_CENTER,
+                                                   XmNwidth, 100,
+                                                   XmNshadowThickness, 1,
+                                                   NULL);
+      XmStringFree(xms);
+    }
   }
 
-  /* -- OptionMenu -- */
-  section_label(page, "OptionMenu");
+  /* -- Menubutton (CascadeButton + PulldownMenu) -- */
+  section_label(page, "Menubutton");
 
   {
-    Widget opt = XmCreateOptionMenu(page, "fileOption", NULL, 0);
-    const char *names[] = {"New", "Open", "Auto-save", "Quit"};
-    XtCallbackProc cbs[] = {push_cb, push_cb, NULL, exit_cb};
-    const char *msgs[] = {"File > New", "File > Open", NULL, NULL};
-    int i;
-    for (i = 0; i < 4; i++) {
-      XmString xms = XmStringCreateLocalized((char *)names[i]);
-      Widget btn = XtVaCreateManagedWidget(names[i],
-                                           xmPushButtonWidgetClass, opt,
-                                           XmNlabelString, xms,
-                                           NULL);
-      XmStringFree(xms);
-      if (cbs[i])
-        XtAddCallback(btn, XmNactivateCallback, cbs[i], (XtPointer)msgs[i]);
-    }
-    XtManageChild(opt);
+    XmString xms = XmStringCreateLocalized("File");
+    Widget mb = XtVaCreateManagedWidget("menubutton",
+                                         xmCascadeButtonWidgetClass, page,
+                                         XmNlabelString, xms,
+                                         NULL);
+    XmStringFree(xms);
+
+    Widget menu = XmCreatePulldownMenu(mb, "mbMenu", NULL, 0);
+    XtVaSetValues(mb, XmNsubMenuId, menu, NULL);
+
+    /* Build menu items: New, Open, separator, Auto-save check, separator, Quit */
+    XmString item_xms;
+    Widget item;
+
+    item_xms = XmStringCreateLocalized("New");
+    item = XtVaCreateManagedWidget("mbNew", xmPushButtonWidgetClass, menu,
+                                    XmNlabelString, item_xms, NULL);
+    XmStringFree(item_xms);
+    XtAddCallback(item, XmNactivateCallback, push_cb, "File > New");
+
+    item_xms = XmStringCreateLocalized("Open");
+    item = XtVaCreateManagedWidget("mbOpen", xmPushButtonWidgetClass, menu,
+                                    XmNlabelString, item_xms, NULL);
+    XmStringFree(item_xms);
+    XtAddCallback(item, XmNactivateCallback, push_cb, "File > Open");
+
+    XtVaCreateManagedWidget("mbSep1", xmSeparatorWidgetClass, menu, NULL);
+
+    item_xms = XmStringCreateLocalized("Auto-save");
+    item = XtVaCreateManagedWidget("mbAutoSave", xmToggleButtonWidgetClass, menu,
+                                    XmNlabelString, item_xms,
+                                    NULL);
+    XmStringFree(item_xms);
+    XtAddCallback(item, XmNvalueChangedCallback, mb_autosave_cb, NULL);
+
+    XtVaCreateManagedWidget("mbSep2", xmSeparatorWidgetClass, menu, NULL);
+
+    item_xms = XmStringCreateLocalized("Quit");
+    item = XtVaCreateManagedWidget("mbQuit", xmPushButtonWidgetClass, menu,
+                                    XmNlabelString, item_xms, NULL);
+    XmStringFree(item_xms);
+    XtAddCallback(item, XmNactivateCallback, exit_cb, NULL);
   }
 }
 
