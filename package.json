@@ -17,7 +17,6 @@
     "clean": "rimraf build"
   },
   "devDependencies": {
-    "playwright": "^1.61.0",
     "rimraf": "^5.0.5",
     "vite": "^5.2.0"
   }

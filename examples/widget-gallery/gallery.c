@@ -763,10 +763,8 @@ int main(int argc, char *argv[]) {
                                      NULL);
 
   /* --- Menu bar --- */
-  menu_bar = XtVaCreateManagedWidget("menuBar", xmRowColumnWidgetClass, main_win,
-                                     XmNorientation, XmHORIZONTAL,
-                                     XmNpacking, XmPACK_TIGHT,
-                                     NULL);
+  menu_bar = XmCreateMenuBar(main_win, "menuBar", NULL, 0);
+  XtManageChild(menu_bar);
 
   file_menu = make_menu(menu_bar, "File", 'F');
   add_menu_item(file_menu, "New", 'N', push_cb, "File > New");

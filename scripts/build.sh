@@ -68,6 +68,18 @@ else
       STALE=1
     fi
   fi
+
+  # Check for em-x11 source changes — the cmake CONFIGURE_DEPENDS
+  # on file(GLOB_RECURSE) catches this at build time, but a stale
+  # cache can prevent em-x11 from being reconfigured.
+  EM_X11_NATIVE="$EM_X11_SRC/native"
+  if [ -d "$EM_X11_NATIVE" ]; then
+    NEWEST_EMX11=$(find "$EM_X11_NATIVE" \( -name '*.c' -o -name '*.h' \) -newer "$CACHE_FILE" 2>/dev/null | head -1)
+    if [ -n "$NEWEST_EMX11" ]; then
+      log "em-x11 source $(realpath --relative-to="$REPO_ROOT" "$NEWEST_EMX11") is newer than CMakeCache.txt"
+      STALE=1
+    fi
+  fi
 fi
 
 # --- Step 3: build em-x11 default-host IIFE (vite) ---

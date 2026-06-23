@@ -273,30 +273,6 @@ static const char *ev_name(int type) {
     }
 }
 
-static void walk_tree(Widget w, int depth) {
-    char indent[64];
-    int j;
-    if (!w) { printf("NULL widget at depth %d\n", depth); return; }
-    for (j = 0; j < depth && j < 60; j++) indent[j] = ' ';
-    indent[j] = 0;
-    {
-        Dimension cw = 0, ch = 0; Position cx = 0, cy = 0;
-        XtVaGetValues(w, XmNwidth, &cw, XmNheight, &ch, XmNx, &cx, XmNy, &cy, NULL);
-        printf("%s name=%s x=%d y=%d w=%d h=%d managed=%d realized=%d\n",
-            indent, XtName(w), cx, cy, cw, ch, XtIsManaged(w), XtIsRealized(w) ? 1 : 0);
-    }
-    if (depth < 5) {
-        WidgetList kids = NULL; Cardinal nk = 0; Cardinal i;
-        XtVaGetValues(w, XmNchildren, &kids, XmNnumChildren, &nk, NULL);
-        if (kids && nk > 0) {
-            for (i = 0; i < nk; i++) {
-                if (kids[i]) walk_tree(kids[i], depth + 1);
-                else printf("%s  [NULL child at index %d]\n", indent, i);
-            }
-        }
-    }
-}
-
 int
 main(int argc, char *argv[] )
 {
