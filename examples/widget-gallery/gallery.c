@@ -327,12 +327,7 @@ static void create_text_entry_tab(Widget nb, int page_num) {
   section_label(page, "Text (multi-line)");
 
   {
-    Widget sw = XtVaCreateManagedWidget("textSW",
-                                        xmScrolledWindowWidgetClass, page,
-                                        XmNscrollingPolicy, XmAUTOMATIC,
-                                        XmNheight, 150,
-                                        NULL);
-    Widget txt = XtVaCreateManagedWidget("text", xmTextWidgetClass, sw,
+    Widget txt = XtVaCreateManagedWidget("text", xmTextWidgetClass, page,
                                          XmNeditMode, XmMULTI_LINE_EDIT,
                                          XmNrows, 8,
                                          XmNcolumns, 52,
