@@ -1,6 +1,6 @@
 /*
  * widget-gallery — Motif Widget Gallery
- * Self-contained Motif widget demo using XmNotebook tab structure.
+ * Self-contained Motif widget demo using XmTabStack.
  * No MRM/UID dependency; all widgets created in C code.
  * Only includes widgets that Motif genuinely provides — no fakery.
  */
@@ -12,7 +12,7 @@
 #include <X11/Xlib.h>
 #include <Xm/Xm.h>
 #include <Xm/MainW.h>
-#include <Xm/Notebook.h>
+#include <Xm/TabStack.h>
 #include <Xm/PushB.h>
 #include <Xm/ToggleB.h>
 #include <Xm/Label.h>
@@ -31,7 +31,7 @@
 #include <Xm/DrawingA.h>
 
 static Widget status_label = NULL;
-static Widget notebook = NULL;
+static Widget tab_stack = NULL;
 
 /* -- Utility helpers -- */
 
@@ -125,7 +125,8 @@ static void about_cb(Widget w, XtPointer cd, XtPointer cb) {
 static void view_tab_cb(Widget w, XtPointer cd, XtPointer cb) {
   (void)w; (void)cb;
   int page = (int)(intptr_t)cd;
-  XtVaSetValues(notebook, XmNcurrentPageNumber, page, NULL);
+  Widget child = XmTabStackIndexToWidget(tab_stack, page);
+  if (child) XmTabStackSelectTab(child, True);
 }
 
 /* -- Menu bar helpers -- */
@@ -155,7 +156,7 @@ static Widget add_menu_item(Widget menu, const char *label, char mnemonic,
   return btn;
 }
 
-/* -- Section header: label inside page RowColumn, spacing handled by parent -- */
+/* -- Section header: label inside page RowColumn -- */
 
 static Widget section_label(Widget parent, const char *text) {
   XmString xms = XmStringCreateLocalized((char *)text);
@@ -167,13 +168,12 @@ static Widget section_label(Widget parent, const char *text) {
   return w;
 }
 
-/* ====================================================================
- * Tab 1 — Buttons
- * ==================================================================== */
+/* -- Helper: create a page with tab label constraint -- */
 
-static void create_buttons_tab(Widget nb, int page_num) {
-  Widget page = XtVaCreateManagedWidget("buttonsPage", xmRowColumnWidgetClass, nb,
-                                        XmNpageNumber, page_num,
+static Widget create_page(Widget ts, const char *name, const char *tab_label) {
+  XmString xms = XmStringCreateLocalized((char *)tab_label);
+  Widget page = XtVaCreateManagedWidget(name, xmRowColumnWidgetClass, ts,
+                                        XmNtabLabelString, xms,
                                         XmNorientation, XmVERTICAL,
                                         XmNpacking, XmPACK_TIGHT,
                                         XmNentryAlignment, XmALIGNMENT_BEGINNING,
@@ -181,9 +181,16 @@ static void create_buttons_tab(Widget nb, int page_num) {
                                         XmNmarginWidth, 14,
                                         XmNmarginHeight, 10,
                                         NULL);
-  XtVaCreateManagedWidget("Buttons", xmPushButtonWidgetClass, nb,
-                          XmNpageNumber, page_num,
-                          NULL);
+  XmStringFree(xms);
+  return page;
+}
+
+/* ====================================================================
+ * Tab 1 — Buttons
+ * ==================================================================== */
+
+static void create_buttons_tab(Widget ts) {
+  Widget page = create_page(ts, "buttonsPage", "Buttons");
 
   /* -- PushButton -- */
   section_label(page, "PushButton");
@@ -281,19 +288,8 @@ static void create_buttons_tab(Widget nb, int page_num) {
  * Tab 2 — Text & Entry
  * ==================================================================== */
 
-static void create_text_entry_tab(Widget nb, int page_num) {
-  Widget page = XtVaCreateManagedWidget("textPage", xmRowColumnWidgetClass, nb,
-                                        XmNpageNumber, page_num,
-                                        XmNorientation, XmVERTICAL,
-                                        XmNpacking, XmPACK_TIGHT,
-                                        XmNentryAlignment, XmALIGNMENT_BEGINNING,
-                                        XmNspacing, 6,
-                                        XmNmarginWidth, 14,
-                                        XmNmarginHeight, 10,
-                                        NULL);
-  XtVaCreateManagedWidget("Text & Entry", xmPushButtonWidgetClass, nb,
-                          XmNpageNumber, page_num,
-                          NULL);
+static void create_text_entry_tab(Widget ts) {
+  Widget page = create_page(ts, "textPage", "Text & Entry");
 
   /* -- Label -- */
   section_label(page, "Label");
@@ -347,19 +343,8 @@ static void create_text_entry_tab(Widget nb, int page_num) {
  * Tab 3 — Selection
  * ==================================================================== */
 
-static void create_selection_tab(Widget nb, int page_num) {
-  Widget page = XtVaCreateManagedWidget("selectPage", xmRowColumnWidgetClass, nb,
-                                        XmNpageNumber, page_num,
-                                        XmNorientation, XmVERTICAL,
-                                        XmNpacking, XmPACK_TIGHT,
-                                        XmNentryAlignment, XmALIGNMENT_BEGINNING,
-                                        XmNspacing, 6,
-                                        XmNmarginWidth, 14,
-                                        XmNmarginHeight, 10,
-                                        NULL);
-  XtVaCreateManagedWidget("Selection", xmPushButtonWidgetClass, nb,
-                          XmNpageNumber, page_num,
-                          NULL);
+static void create_selection_tab(Widget ts) {
+  Widget page = create_page(ts, "selectPage", "Selection");
 
   /* -- List -- */
   section_label(page, "List");
@@ -404,19 +389,8 @@ static void create_selection_tab(Widget nb, int page_num) {
  * Tab 4 — Containers
  * ==================================================================== */
 
-static void create_containers_tab(Widget nb, int page_num) {
-  Widget page = XtVaCreateManagedWidget("containersPage", xmRowColumnWidgetClass, nb,
-                                        XmNpageNumber, page_num,
-                                        XmNorientation, XmVERTICAL,
-                                        XmNpacking, XmPACK_TIGHT,
-                                        XmNentryAlignment, XmALIGNMENT_BEGINNING,
-                                        XmNspacing, 6,
-                                        XmNmarginWidth, 14,
-                                        XmNmarginHeight, 10,
-                                        NULL);
-  XtVaCreateManagedWidget("Containers", xmPushButtonWidgetClass, nb,
-                          XmNpageNumber, page_num,
-                          NULL);
+static void create_containers_tab(Widget ts) {
+  Widget page = create_page(ts, "containersPage", "Containers");
 
   /* -- Frame -- */
   section_label(page, "Frame");
@@ -550,19 +524,8 @@ static void da_resize_cb(Widget w, XtPointer cd, XtPointer cb) {
   da_expose_cb(w, cd, cb);
 }
 
-static void create_canvas_tab(Widget nb, int page_num) {
-  Widget page = XtVaCreateManagedWidget("canvasPage", xmRowColumnWidgetClass, nb,
-                                        XmNpageNumber, page_num,
-                                        XmNorientation, XmVERTICAL,
-                                        XmNpacking, XmPACK_TIGHT,
-                                        XmNentryAlignment, XmALIGNMENT_BEGINNING,
-                                        XmNspacing, 6,
-                                        XmNmarginWidth, 14,
-                                        XmNmarginHeight, 10,
-                                        NULL);
-  XtVaCreateManagedWidget("Canvas", xmPushButtonWidgetClass, nb,
-                          XmNpageNumber, page_num,
-                          NULL);
+static void create_canvas_tab(Widget ts) {
+  Widget page = create_page(ts, "canvasPage", "Canvas");
 
   section_label(page, "DrawingArea: Xlib drawing primitives");
 
@@ -672,19 +635,8 @@ static void save_file_cb(Widget w, XtPointer cd, XtPointer cb) {
   status("Save file dialog...");
 }
 
-static void create_dialogs_tab(Widget nb, int page_num) {
-  Widget page = XtVaCreateManagedWidget("dialogsPage", xmRowColumnWidgetClass, nb,
-                                        XmNpageNumber, page_num,
-                                        XmNorientation, XmVERTICAL,
-                                        XmNpacking, XmPACK_TIGHT,
-                                        XmNentryAlignment, XmALIGNMENT_BEGINNING,
-                                        XmNspacing, 6,
-                                        XmNmarginWidth, 14,
-                                        XmNmarginHeight, 10,
-                                        NULL);
-  XtVaCreateManagedWidget("Common Dialogs", xmPushButtonWidgetClass, nb,
-                          XmNpageNumber, page_num,
-                          NULL);
+static void create_dialogs_tab(Widget ts) {
+  Widget page = create_page(ts, "dialogsPage", "Common Dialogs");
 
   /* -- Message Box -- */
   section_label(page, "MessageBox");
@@ -772,18 +724,18 @@ int main(int argc, char *argv[]) {
 
   XtVaSetValues(main_win, XmNmenuBar, menu_bar, NULL);
 
-  /* --- Notebook --- */
-  notebook = XmCreateNotebook(main_win, "notebook", NULL, 0);
+  /* --- TabStack --- */
+  tab_stack = XmCreateTabStack(main_win, "tabStack", NULL, 0);
 
-  create_buttons_tab(notebook, 0);
-  create_text_entry_tab(notebook, 1);
-  create_selection_tab(notebook, 2);
-  create_containers_tab(notebook, 3);
-  create_canvas_tab(notebook, 4);
-  create_dialogs_tab(notebook, 5);
+  create_buttons_tab(tab_stack);
+  create_text_entry_tab(tab_stack);
+  create_selection_tab(tab_stack);
+  create_containers_tab(tab_stack);
+  create_canvas_tab(tab_stack);
+  create_dialogs_tab(tab_stack);
 
-  XtManageChild(notebook);
-  XtVaSetValues(main_win, XmNworkWindow, notebook, NULL);
+  XtManageChild(tab_stack);
+  XtVaSetValues(main_win, XmNworkWindow, tab_stack, NULL);
 
   /* --- Status bar --- */
   {
