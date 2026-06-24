@@ -30,17 +30,17 @@ if(NOT EXISTS "${EM_X11_SRC}/cmake/em_x11_demo.cmake")
         "Set EM_X11_SRC=/path/to/em-x11 or place motif-wasm as a sibling to em-x11.")
 endif()
 
-# --- Locate Motif source (dimmus/motif, external — never forked or modified) ---
+# --- Locate Motif source (thentenaar/motif v2.5.2, external — never forked or modified) ---
 
 if(DEFINED ENV{MOTIF_SRC})
-    set(MOTIF_SRC "$ENV{MOTIF_SRC}" CACHE PATH "Path to dimmus/motif source root")
+    set(MOTIF_SRC "$ENV{MOTIF_SRC}" CACHE PATH "Path to thentenaar/motif source root")
 elseif(NOT DEFINED MOTIF_SRC)
-    set(MOTIF_SRC "${CMAKE_SOURCE_DIR}/ignored-area/third-party/motif" CACHE PATH "Path to dimmus/motif source root")
+    set(MOTIF_SRC "${CMAKE_SOURCE_DIR}/ignored-area/third-party/motif" CACHE PATH "Path to thentenaar/motif source root")
 endif()
 
-if(NOT EXISTS "${MOTIF_SRC}/src/lib/Xm/Xm.h.in")
+if(NOT EXISTS "${MOTIF_SRC}/lib/Xm/Xm.h.in")
     message(FATAL_ERROR
-        "dimmus/motif not found at ${MOTIF_SRC}. "
+        "thentenaar/motif not found at ${MOTIF_SRC}. "
         "Set MOTIF_SRC=/path/ignored-area/third-party/motif or run: scripts/fetch-motif.sh")
 endif()
 
@@ -68,18 +68,20 @@ set(EM_X11_THIRD_PARTY_INCLUDES
 )
 
 # --- Generate Xm.h from Xm.h.in ---
-# dimmus/motif ships Xm.h as a broken symlink; Xm.h.in uses @VAR@
-# substitutions. We generate the real header in our build directory.
+# thentenaar/motif ships Xm.h.in with @VAR@ substitutions.
+# We generate the real header in our build directory.
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/Xm")
 
 set(XM_WITH_JPEG "#define XM_WITH_JPEG 1")
 set(XM_WITH_PNG "#define XM_WITH_PNG 1")
+set(XM_WITH_XRANDR "#define XM_WITH_XRANDR 0")
+set(XM_WITH_XINERAMA "#define XM_WITH_XINERAMA 0")
 set(XM_PRINTING "#define XM_PRINTING 0")
 set(XM_UTF8 "#define XM_UTF8 1")
 
 configure_file(
-    "${MOTIF_SRC}/src/lib/Xm/Xm.h.in"
+    "${MOTIF_SRC}/lib/Xm/Xm.h.in"
     "${CMAKE_BINARY_DIR}/include/Xm/Xm.h"
     @ONLY
 )
@@ -87,11 +89,11 @@ configure_file(
 # --- Generate version.h from version.h.in ---
 
 set(XM_MAJOR 2)
-set(XM_MINOR 4)
-set(XM_PATCH 1)
+set(XM_MINOR 5)
+set(XM_PATCH 2)
 
 configure_file(
-    "${MOTIF_SRC}/src/lib/Xm/version.h.in"
+    "${MOTIF_SRC}/lib/Xm/version.h.in"
     "${CMAKE_BINARY_DIR}/include/Xm/version.h"
     @ONLY
 )
@@ -103,7 +105,7 @@ configure_file(
 set(_gen_dir "${CMAKE_BINARY_DIR}/include/Xm")
 
 function(_gen_strdefs stem extern_sym)
-    set(_ht "${MOTIF_SRC}/src/lib/Xm/${stem}.ht")
+    set(_ht "${MOTIF_SRC}/lib/Xm/${stem}.ht")
     set(_h  "${_gen_dir}/${stem}.h")
     if(EXISTS "${_ht}" AND NOT EXISTS "${CMAKE_SOURCE_DIR}/native/generated/Xm/${stem}.h")
         file(READ "${_ht}" _content)
@@ -116,18 +118,18 @@ endfunction()
 _gen_strdefs("XmStrDefs"   "XmStrings")
 _gen_strdefs("XmStrDefs22" "XmStrings22")
 _gen_strdefs("XmStrDefs23" "XmStrings23")
+_gen_strdefs("XmStrDefs25" "XmStrings25")
 _gen_strdefs("XmStrDefsI"  "XmStringsI")
 
 # --- libXm (Motif widget library) ---
 
-file(GLOB LIBXM_SOURCES "${MOTIF_SRC}/src/lib/Xm/*.c")
-file(GLOB LIBMRM_SOURCES "${MOTIF_SRC}/src/lib/Mrm/*.c")
+file(GLOB LIBXM_SOURCES "${MOTIF_SRC}/lib/Xm/*.c")
+file(GLOB LIBMRM_SOURCES "${MOTIF_SRC}/lib/Mrm/*.c")
 
 # Exclude files that need host libraries we'll provide via emscripten ports
 # or that aren't available in wasm.
 list(REMOVE_ITEM LIBXM_SOURCES
-    "${MOTIF_SRC}/src/lib/Xm/PrintS.c"
-    "${MOTIF_SRC}/src/lib/Xm/sharedlib.c"
+    "${MOTIF_SRC}/lib/Xm/sharedlib.c"
 )
 
 add_library(Xm STATIC ${LIBXM_SOURCES} ${LIBMRM_SOURCES})
@@ -144,15 +146,17 @@ target_include_directories(Xm
         "${CMAKE_SOURCE_DIR}/native"            # our config.h
         "${CMAKE_SOURCE_DIR}/native/include"    # shadow Xft.h (before em-x11)
         "${CMAKE_SOURCE_DIR}/native/generated"  # makestrs-generated XmStrDefs*.h
-        "${MOTIF_SRC}/src/lib"                  # <Xm/Xm.h> → src/lib/Xm/Xm.h
+        "${MOTIF_SRC}/lib"                      # <Xm/Xm.h> → lib/Xm/Xm.h
         "${EM_X11_INCLUDE_DIR}"
         ${EM_X11_THIRD_PARTY_INCLUDES}
-        "${MOTIF_SRC}/include"                  # motif_system.h
+        "${MOTIF_SRC}/include"                  # Dt/ headers
+        "${CMAKE_SOURCE_DIR}/ignored-area/include"  # X11/bitmaps/ symlinks
     # PRIVATE: paths needed only when compiling libXm itself
     PRIVATE
-        "${CMAKE_BINARY_DIR}/include/Xm"        # "Xm.h" (ToolTipI.h uses bare include)
-        "${MOTIF_SRC}/src/lib/Xm"               # "XmI.h" etc.
-        "${MOTIF_SRC}/src/lib/Mrm"              # "MrmI.h" etc.
+        "${CMAKE_BINARY_DIR}/include/Xm"             # "Xm.h" (ToolTipI.h uses bare include)
+        "${CMAKE_SOURCE_DIR}/native/generated/Xm"    # "XmStrDefsI.h" etc. (bare includes)
+        "${MOTIF_SRC}/lib/Xm"                        # "XmI.h" etc.
+        "${MOTIF_SRC}/lib/Mrm"                       # "MrmI.h" etc.
 )
 
 target_compile_definitions(Xm
@@ -229,7 +233,7 @@ if(BUILD_EXAMPLES)
 
     target_include_directories(periodic PRIVATE
         "${CMAKE_BINARY_DIR}/include"   # generated Xm.h
-        "${MOTIF_SRC}/src/lib"          # <Xm/...h> headers
+        "${MOTIF_SRC}/lib"              # <Xm/...h> headers
     )
 
     target_compile_options(periodic PRIVATE -w -g)
@@ -269,7 +273,7 @@ if(BUILD_EXAMPLES)
 
     target_include_directories(widget-gallery PRIVATE
         "${CMAKE_BINARY_DIR}/include"   # generated Xm.h
-        "${MOTIF_SRC}/src/lib"          # <Xm/...h> headers
+        "${MOTIF_SRC}/lib"              # <Xm/...h> headers
     )
 
     target_compile_options(widget-gallery PRIVATE -w -g)

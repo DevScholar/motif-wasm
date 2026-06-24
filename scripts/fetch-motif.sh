@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# fetch-motif.sh -- ensure the Motif source tree is available as a sibling
-#                   directory, stage it into our ignored-area, and compile
-#                   UIL assets we need at build time.
+# fetch-motif.sh -- download and stage Motif 2.5.2 source for the wasm build.
 #
-# Clones https://github.com/dimmus/motif.git into ignored-area/motif-full/
-# (Motif source is never forked, modified, or committed here).
+# Downloads https://github.com/thentenaar/motif/archive/refs/tags/v2.5.2.tar.gz
+# into ignored-area/motif-full/ (Motif source is never forked, modified, or
+# committed here).
 # Then copies the relevant source files into ignored-area/third-party/motif/
 # which is what CMakeLists.txt actually compiles.
 #
 # Prerequisites:
 #   - uil (Motif UIL compiler): sudo apt install uil
+#   - curl, tar
 #
-# Idempotent: skips clone if the target .git already exists;
+# Idempotent: skips download if the target source already exists;
 #             skips staging if .fetched sentinel exists.
 
 set -euo pipefail
@@ -24,27 +24,37 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MOTIF_SRC="${MOTIF_SRC:-$REPO_ROOT/ignored-area/motif-full}"
-MOTIF_REPO="https://github.com/dimmus/motif.git"
+MOTIF_TARBALL="https://github.com/thentenaar/motif/archive/refs/tags/v2.5.2.tar.gz"
+MOTIF_VERSION="2.5.2"
 
 log()  { printf '    %s\n' "$*"; }
 warn() { printf '    WARNING: %s\n' "$*"; }
 die()  { printf 'fetch-motif: %s\n' "$*" >&2; exit 1; }
 
-# --- Clone motif (if not already present) ---
+# --- Download motif tarball (if not already present) ---
 
-if [ -d "$MOTIF_SRC/.git" ]; then
-  log "motif already cloned at $MOTIF_SRC"
+MOTIF_SENTINEL="$MOTIF_SRC/.fetched"
+
+if [ -f "$MOTIF_SENTINEL" ]; then
+  log "motif ${MOTIF_VERSION} already downloaded at $MOTIF_SRC"
 else
-  if ! command -v git >/dev/null 2>&1; then
-    die "git not found"
+  if ! command -v curl >/dev/null 2>&1; then
+    die "curl not found"
   fi
-  log "cloning $MOTIF_REPO -> $MOTIF_SRC"
-  git clone --depth 1 "$MOTIF_REPO" "$MOTIF_SRC" 2>&1 | sed 's/^/      /'
+  log "downloading motif ${MOTIF_VERSION} -> $MOTIF_SRC"
+  rm -rf "$MOTIF_SRC"
+  mkdir -p "$MOTIF_SRC"
+
+  curl -L --silent --show-error "$MOTIF_TARBALL" \
+    | tar -xz --strip-components=1 -C "$MOTIF_SRC" 2>&1 | sed 's/^/      /'
+
+  touch "$MOTIF_SENTINEL"
+  log "motif ${MOTIF_VERSION} downloaded"
 fi
 
 # --- Stage motif source into our ignored-area ---
 # CMakeLists.txt compiles from this tree (never the upstream clone directly).
-# We mirror src/lib/Xm, src/lib/Mrm, include/, and bin/utils/makestrs.
+# We mirror lib/Xm, lib/Mrm, include/, and config/makestrs.
 # Idempotent: skips copy if .fetched sentinel exists.
 
 STAGED_MOTIF="$REPO_ROOT/ignored-area/third-party/motif"
@@ -55,21 +65,62 @@ if [ -f "$STAGED_SENTINEL" ]; then
 else
   log "staging motif source into ignored-area/third-party/motif/"
   rm -rf "$STAGED_MOTIF"
-  mkdir -p "$STAGED_MOTIF/src/lib"
-  mkdir -p "$STAGED_MOTIF/src/bin/utils"
+  mkdir -p "$STAGED_MOTIF/lib"
+  mkdir -p "$STAGED_MOTIF/config"
   mkdir -p "$STAGED_MOTIF/include"
-  mkdir -p "$STAGED_MOTIF/src/examples/programs"
+  mkdir -p "$STAGED_MOTIF/demos/programs"
 
-  # No trailing slash on source — cp -a creates the leaf dir correctly
-  cp -a "$MOTIF_SRC/src/lib/Xm"   "$STAGED_MOTIF/src/lib/"
-  cp -a "$MOTIF_SRC/src/lib/Mrm"  "$STAGED_MOTIF/src/lib/"
-  cp -a "$MOTIF_SRC/include/"     "$STAGED_MOTIF/include/"
-  cp -a "$MOTIF_SRC/src/bin/utils/makestrs.c" "$STAGED_MOTIF/src/bin/utils/"
+  cp -a "$MOTIF_SRC/lib/Xm"   "$STAGED_MOTIF/lib/"
+  cp -a "$MOTIF_SRC/lib/Mrm"  "$STAGED_MOTIF/lib/"
+  cp -a "$MOTIF_SRC/include/" "$STAGED_MOTIF/include/"
+  cp -a "$MOTIF_SRC/config/makestrs.c" "$STAGED_MOTIF/config/"
 
-  if [ -d "$MOTIF_SRC/src/examples/programs/periodic" ]; then
-    cp -a "$MOTIF_SRC/src/examples/programs/periodic" \
-          "$STAGED_MOTIF/src/examples/programs/"
+  if [ -d "$MOTIF_SRC/demos/programs/periodic" ]; then
+    cp -a "$MOTIF_SRC/demos/programs/periodic" \
+          "$STAGED_MOTIF/demos/programs/"
   fi
+
+  # Fix _XmCreateImage macro in XmI.h: the upstream version uses bare
+  # IMAGE->member which breaks when IMAGE is *ptr (operator precedence).
+  # Parenthesize (IMAGE) and wrap in do-while, matching the XmP.h style.
+  log "patching XmI.h _XmCreateImage macro"
+  python3 -c "
+import re
+path = '$STAGED_MOTIF/lib/Xm/XmI.h'
+with open(path) as f:
+    content = f.read()
+old = '''#define _XmCreateImage(IMAGE, DISPLAY, DATA, WIDTH, HEIGHT, BYTE_ORDER) {\\\\
+    IMAGE = XCreateImage(DISPLAY,\\\\
+			 DefaultVisual(DISPLAY, DefaultScreen(DISPLAY)),\\\\
+			 1,\\\\
+			 XYBitmap,\\\\
+			 0,\\\\
+			 DATA,\\\\
+			 WIDTH, HEIGHT,\\\\
+			 8,\\\\
+			 (WIDTH+7) >> 3);\\\\
+    IMAGE->byte_order = BYTE_ORDER;\\\\
+    IMAGE->bitmap_unit = 8;\\\\
+    IMAGE->bitmap_bit_order = LSBFirst;\\\\
+}'''
+new = '''#define _XmCreateImage(IMAGE, DISPLAY, DATA, WIDTH, HEIGHT, BYTE_ORDER) \\\\
+do { \\\\
+    (IMAGE) = XCreateImage(DISPLAY,\\\\
+			 DefaultVisual(DISPLAY, DefaultScreen(DISPLAY)),\\\\
+			 1, XYBitmap, 0, (DATA), (WIDTH), (HEIGHT),\\\\
+			 8, (((WIDTH)+7) >> 3));\\\\
+    (IMAGE)->byte_order = (BYTE_ORDER);\\\\
+    (IMAGE)->bitmap_unit = 8;\\\\
+    (IMAGE)->bitmap_bit_order = LSBFirst;\\\\
+} while (0)'''
+if old in content:
+    content = content.replace(old, new)
+    with open(path, 'w') as f:
+        f.write(content)
+    print('    patched')
+else:
+    print('    already patched (or macro not found)')
+" 2>&1 | sed 's/^/      /'
 
   touch "$STAGED_SENTINEL"
   log "motif source staged"
@@ -77,7 +128,7 @@ fi
 
 # --- Compile periodic UIL -> UID (output stays in our project) ---
 
-PERIODIC_SRC_DIR="$STAGED_MOTIF/src/examples/programs/periodic"
+PERIODIC_SRC_DIR="$STAGED_MOTIF/demos/programs/periodic"
 PERIODIC_OUT_DIR="$REPO_ROOT/examples/periodic"
 
 if [ -d "$PERIODIC_SRC_DIR" ]; then
@@ -87,29 +138,7 @@ if [ -d "$PERIODIC_SRC_DIR" ]; then
   fi
   mkdir -p "$PERIODIC_OUT_DIR"
 
-  # The system uil (2.3.8) fails when periodic.uil includes periodic_l.uil
-  # (two module declarations in one compilation). Merge them into a single
-  # module: take the main file, inline the value section from the l10n file,
-  # and append everything after the include line.
-  MERGED_UIL="$PERIODIC_OUT_DIR/.periodic_merged.uil"
-  cat > "$MERGED_UIL" << 'UILEOF'
-module periodic
-    version = 'v2.0'
-    names = case_sensitive
-    objects = {
-	XmLabel = widget;
-	XmPushButton = widget;
-	XmToggleButton = widget;
-	XmCascadeButton = widget;
-	XmSeparator = widget;
-    }
-UILEOF
-  sed -n '/^value$/,$ p' "$PERIODIC_SRC_DIR/periodic_l.uil" | head -n -1 >> "$MERGED_UIL"
-  awk 'NR>50' "$PERIODIC_SRC_DIR/periodic.uil" >> "$MERGED_UIL"
-
-  uil -o "$PERIODIC_OUT_DIR/periodic.uid" "$MERGED_UIL" \
-    -I"$STAGED_MOTIF/src/lib/Xm" 2>&1 || warn "UIL compilation failed"
-  rm -f "$MERGED_UIL"
+  uil -o "$PERIODIC_OUT_DIR/periodic.uid" "$PERIODIC_SRC_DIR/periodic.uil"     -I"$PERIODIC_SRC_DIR" -I"$STAGED_MOTIF/lib/Xm" 2>&1 || warn "UIL compilation failed"
 else
   warn "periodic demo not found at $PERIODIC_SRC_DIR"
 fi
@@ -135,13 +164,13 @@ else
 fi
 
 # --- Compile makestrs and generate XmStrDefs files ---
-# dimmus/motif ships resource string definitions as .ht/.ct templates
+# thentenaar/motif ships resource string definitions as .ht/.ct templates
 # that must be processed by makestrs. We compile makestrs natively and
 # generate the real .h/.c files into our own source tree (never modifying
 # the upstream motif repo).
 
-MAKESTRS_SRC="$STAGED_MOTIF/src/bin/utils/makestrs.c"
-STRDEFS_DIR="$STAGED_MOTIF/src/lib/Xm"
+MAKESTRS_SRC="$STAGED_MOTIF/config/makestrs.c"
+STRDEFS_DIR="$STAGED_MOTIF/lib/Xm"
 GEN_DIR="$REPO_ROOT/native/generated/Xm"
 
 if [ -f "$MAKESTRS_SRC" ]; then
@@ -155,19 +184,17 @@ if [ -f "$MAKESTRS_SRC" ]; then
     rm -rf "$GEN_DIR"
     mkdir -p "$GEN_DIR"
 
-    # Copy template files to gen dir
     cp "$STRDEFS_DIR/XmStrDefs.ct"   "$GEN_DIR/"
     cp "$STRDEFS_DIR/XmStrDefs.ht"   "$GEN_DIR/"
     cp "$STRDEFS_DIR/XmStrDefs22.ht" "$GEN_DIR/"
     cp "$STRDEFS_DIR/XmStrDefs23.ht" "$GEN_DIR/"
+    cp "$STRDEFS_DIR/XmStrDefs25.ht" "$GEN_DIR/"
     cp "$STRDEFS_DIR/XmStrDefsI.ht"  "$GEN_DIR/"
     cp "$STRDEFS_DIR/xmstring.list.in" "$GEN_DIR/xmstring.list"
 
-    # Run makestrs to generate .c and .h files
     (cd "$GEN_DIR" && "$MAKESTRS_BIN" -f xmstring.list > XmStrDefs.c 2>/dev/null) || true
 
-    # makestrs should generate headers; if not, create minimal fallbacks
-    for _stem in XmStrDefs XmStrDefs22 XmStrDefs23 XmStrDefsI; do
+    for _stem in XmStrDefs XmStrDefs22 XmStrDefs23 XmStrDefs25 XmStrDefsI; do
       if [ ! -f "$GEN_DIR/${_stem}.h" ] || [ ! -s "$GEN_DIR/${_stem}.h" ]; then
         warn "${_stem}.h not generated by makestrs -- using fallback"
         sed "s/<<<STRING_TABLE_GOES_HERE>>>/extern char *XmStrings[];/" \

@@ -62,7 +62,7 @@ else
   # is newer than the cache, cmake might need to re-glob.
   STAGED_MOTIF="$REPO_ROOT/ignored-area/third-party/motif"
   if [ -d "$STAGED_MOTIF" ]; then
-    NEWEST_C=$(find "$STAGED_MOTIF/src/lib" -name '*.c' -newer "$CACHE_FILE" 2>/dev/null | head -1)
+    NEWEST_C=$(find "$STAGED_MOTIF/lib" -name '*.c' -newer "$CACHE_FILE" 2>/dev/null | head -1)
     if [ -n "$NEWEST_C" ]; then
       log "source file $(realpath --relative-to="$REPO_ROOT" "$NEWEST_C") is newer than CMakeCache.txt"
       STALE=1

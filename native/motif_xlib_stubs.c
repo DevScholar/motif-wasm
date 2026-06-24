@@ -286,8 +286,18 @@ int Xutf8TextListToTextProperty(Display *dpy, char **list, int count,
 
 /* ---- XftDrawString32 — em-x11 doesn't implement this yet ---- */
 
-void XftDrawString32(XftDraw *draw, _Xconst XftColor *color, XftFont *font,
-                     int x, int y, const FcChar32 *string, int len) {
+int XftDrawString32(XftDraw *draw, _Xconst XftColor *color, XftFont *font,
+                    int x, int y, const FcChar32 *string, int len) {
     (void)draw; (void)color; (void)font; (void)x; (void)y;
     (void)string; (void)len;
+    return 0;
+}
+
+/* ---- Xutf8SetWMProperties (Motif 2.5 VendorS.c) ---- */
+
+void Xutf8SetWMProperties(Display *dpy, Window w, _Xconst char *windowName,
+                          _Xconst char *iconName, char **argv, int argc,
+                          XSizeHints *normalHints, XWMHints *wmHints,
+                          XClassHint *classHints) {
+    XSetWMProperties(dpy, w, NULL, NULL, argv, argc, normalHints, wmHints, classHints);
 }

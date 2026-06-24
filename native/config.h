@@ -15,8 +15,10 @@
 #define HAVE_UNISTD_H 1
 #define HAVE_WCTYPE_H 1
 
-/* Additional X11 headers */
+/* Additional system headers */
 #define HAVE_X11_XPOLL_H 1
+#define HAVE_ICONV_H 1
+#define HAVE_ALLOCA_H 1
 
 /* libc functions available in emscripten */
 #define HAVE_GETCWD 1
@@ -25,6 +27,11 @@
 #define HAVE_STRDUP 1
 #define HAVE_NANOSLEEP 1
 #define HAVE_REGCOMP 1
+
+/* Not available in wasm */
+/* #undef HAVE_GETPWNAM_R */
+/* #undef HAVE_GETPWUID_R */
+/* #undef HAVE_STRTOK_R */
 
 /* Type sizes (wasm32) */
 #define SIZEOF_INT 4

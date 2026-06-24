@@ -58,8 +58,10 @@ extern "C" {
 #define XmI_MOTIF_INITIATOR "_MOTIF_INITIATOR"
 #define XmI_MOTIF_RECEIVER "_MOTIF_RECEIVER"
 #define XmI_MOTIF_SELECTION_TEXT "_MOTIF_SELECTION_TEXT"
+#define XmI_NET_WM_NAME "_NET_WM_NAME"
+#define XmI_NET_WM_ICON_NAME "_NET_WM_ICON_NAME"
 #else
-externalref _XmConst char _XmStringsI[];
+externalref const char _XmStringsI[];
 #ifndef XmIATOM_PAIR
 #define XmIATOM_PAIR ((char*)&_XmStringsI[0])
 #endif
@@ -191,6 +193,12 @@ externalref _XmConst char _XmStringsI[];
 #endif
 #ifndef XmI_MOTIF_SELECTION_TEXT
 #define XmI_MOTIF_SELECTION_TEXT ((char*)&_XmStringsI[549])
+#endif
+#ifndef XmI_NET_WM_NAME
+#define XmI_NET_WM_NAME ((char*)&_XmStringsI[571])
+#endif
+#ifndef XmI_NET_WM_ICON_NAME
+#define XmI_NET_WM_ICON_NAME ((char*)&_XmStringsI[584])
 #endif
 #endif /* XMSTRINGDEFINES */
 

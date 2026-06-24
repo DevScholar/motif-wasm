@@ -4,10 +4,6 @@
 
 #include <X11/Intrinsic.h>
 
-#ifndef _XmConst
-#define _XmConst /**/
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -312,7 +308,7 @@ extern "C" {
 #define XmCUseTextField "UseTextField"
 #define XmCVerify "Verify"
 #else
-externalref _XmConst char _XmStrings22[];
+externalref const char _XmStrings22[];
 #ifndef XmCAllowUnusedSpace
 #define XmCAllowUnusedSpace ((char*)&_XmStrings22[0])
 #endif

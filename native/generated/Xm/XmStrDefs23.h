@@ -4,10 +4,6 @@
 
 #include <X11/Intrinsic.h>
 
-#ifndef _XmConst
-#define _XmConst /**/
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,7 +32,7 @@ extern "C" {
 #define XmCXftFont "XftFont"
 #define XmSUTF8_STRING "UTF8_STRING"
 #else
-externalref _XmConst char _XmStrings23[];
+externalref const char _XmStrings23[];
 #ifndef XmNdefaultEntryLabelRenderTable
 #define XmNdefaultEntryLabelRenderTable ((char*)&_XmStrings23[0])
 #endif
