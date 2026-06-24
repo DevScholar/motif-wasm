@@ -228,12 +228,29 @@ main(int argc, char *argv[] )
                                  sessionShellWidgetClass,
                                  NULL );
 
-
     if (MrmOpenHierarchy (1, mrmFile, NULL, &mrmId) != MrmSUCCESS) exit(0);
     MrmRegisterNames(mrmNames, XtNumber(mrmNames));
     MrmFetchWidget (mrmId, "appMain", shell, &appMain, &mrmClass);
     XtManageChild(appMain);
     XtRealizeWidget(shell);
+
+    /* Constrain shell to screen if no WM is running.
+     * Xt's RootGeometryManager accepts any child-requested size;
+     * screen constraining is normally the WM's job (Inter-Client
+     * Communication Conventions Manual §4.1.2.3).  Without a WM we
+     * take care of it ourselves. */
+    {
+        Dimension sw = (Dimension)DisplayWidth(XtDisplayOfObject(shell), 0);
+        Dimension sh = (Dimension)DisplayHeight(XtDisplayOfObject(shell), 0);
+        Dimension w = 0, h = 0;
+        XtVaGetValues(shell, XmNwidth, &w, XmNheight, &h, NULL);
+        if (w > sw || h > sh) {
+            if (w > sw) w = sw;
+            if (h > sh) h = sh;
+            XtVaSetValues(shell, XmNwidth, w, XmNheight, h, NULL);
+        }
+    }
+
     XtAppMainLoop(appContext);
 
     return 0;    /* make compiler happy */
