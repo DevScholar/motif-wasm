@@ -148,7 +148,7 @@ static void ToggleValueChangedCb(
         XmToggleButtonCallbackStruct *cb );
 
 static MrmHierarchy mrmId;
-static char *mrmFile[]={"/periodic.uid"};
+static char *mrmFile[]={"periodic.uid"};
 static MrmCode mrmClass;
 static MRMRegisterArg mrmNames[] = {
         {"InitPopupCb", (XtPointer)InitPopupCb },
@@ -209,76 +209,11 @@ static XtAppContext  appContext;
 static Widget shell;
 static unsigned setting_toggle = 0;
 
-/* Event counter for debugging */
-static int ev_count[128];
-static int expose_received = 0;
-static int expose_seen_in_mainloop = 0;
-static void ev_handler(Widget w, XtPointer cd, XEvent *ev, Boolean *ctd) {
-    if (ev->type < 128) ev_count[ev->type]++;
-    if (ev->type == Expose) {
-        expose_received++;
-        if (expose_received <= 5) {
-            printf("EXPOSE! win=%lu x=%d y=%d w=%d h=%d count=%d\n",
-                (unsigned long)ev->xexpose.window,
-                ev->xexpose.x, ev->xexpose.y,
-                ev->xexpose.width, ev->xexpose.height,
-                ev->xexpose.count);
-        }
-    }
-}
-
-/* Timer callback to report event counts during main loop */
-static void report_timer(XtPointer cd, XtIntervalId *id) {
-    static int tick = 0;
-    tick++;
-    if (tick <= 5) {
-        printf("[tick %d] Expose events: %d (total events: %d)\n",
-            tick, expose_received, expose_received > 0 ? -1 : 0);
-        if (expose_received == 0) {
-            printf("  (no Expose yet — widgets won't draw)\n");
-        }
-    }
-    /* Re-arm timer */
-    XtAppAddTimeOut(XtWidgetToApplicationContext((Widget)cd),
-        2000, report_timer, cd);
-}
-static const char *ev_name(int type) {
-    switch (type) {
-        case 2: return "KeyPress";
-        case 3: return "KeyRelease";
-        case 4: return "ButtonPress";
-        case 5: return "ButtonRelease";
-        case 6: return "MotionNotify";
-        case 7: return "EnterNotify";
-        case 8: return "LeaveNotify";
-        case 12: return "Expose";
-        case 13: return "GraphicsExpose";
-        case 14: return "NoExpose";
-        case 15: return "VisibilityNotify";
-        case 16: return "CreateNotify";
-        case 17: return "DestroyNotify";
-        case 18: return "UnmapNotify";
-        case 19: return "MapNotify";
-        case 22: return "ConfigureNotify";
-        case 23: return "ConfigureRequest";
-        case 25: return "ResizeRequest";
-        case 26: return "CirculateNotify";
-        case 28: return "PropertyNotify";
-        case 29: return "SelectionClear";
-        case 30: return "SelectionRequest";
-        case 31: return "SelectionNotify";
-        case 33: return "ClientMessage";
-        case 34: return "MappingNotify";
-        default: return "?";
-    }
-}
-
 int
 main(int argc, char *argv[] )
 {
     Widget appMain;
 
-    setenv("LANG", "C.UTF-8", 1);
     XtSetLanguageProc(NULL, (XtLanguageProc) NULL, NULL);
 
     MrmInitialize ();
@@ -290,100 +225,15 @@ main(int argc, char *argv[] )
                                  &argc,
                                  argv,
                                  fallbackResources,
-                                 applicationShellWidgetClass,
+                                 sessionShellWidgetClass,
                                  NULL );
 
-    printf("SHELL: %p name=%s\n", (void*)shell, XtName(shell));
-    printf("SHELL parent: %p\n", (void*)XtParent(shell));
 
-    if (MrmOpenHierarchy (1, mrmFile, NULL, &mrmId) != MrmSUCCESS) {
-        printf("MrmOpenHierarchy FAILED\n");
-        exit(0);
-    }
-    printf("MrmOpenHierarchy OK\n");
-
+    if (MrmOpenHierarchy (1, mrmFile, NULL, &mrmId) != MrmSUCCESS) exit(0);
     MrmRegisterNames(mrmNames, XtNumber(mrmNames));
-    printf("MrmRegisterNames OK\n");
-
     MrmFetchWidget (mrmId, "appMain", shell, &appMain, &mrmClass);
-    printf("appMain: %p name=%s isWidget=%d\n", (void*)appMain, XtName(appMain), XtIsWidget(appMain));
-    printf("appMain parent: %p name=%s\n", (void*)XtParent(appMain), XtParent(appMain) ? XtName(XtParent(appMain)) : "NULL");
-
-    printf("calling XtManageChild(appMain)...\n");
     XtManageChild(appMain);
-    printf("XtManageChild done\n");
-
-    /* Add event handler BEFORE realize to capture all events */
-    XtAddEventHandler(shell, (EventMask)0xFFFFFFFF, True, ev_handler, NULL);
-
-    printf("calling XtRealizeWidget(shell)...\n");
     XtRealizeWidget(shell);
-    printf("XtRealizeWidget done\n");
-
-    /* Print shell dimensions using core resources */
-    {
-        Dimension sw = 0, sh = 0;
-        XtVaGetValues(shell, XtNwidth, &sw, XtNheight, &sh, NULL);
-        printf("Shell core dims: w=%d h=%d\n", sw, sh);
-    }
-    /* Print MainWindow info */
-    {
-        Widget mw = XtNameToWidget(shell, "*appMain");
-        if (mw) {
-            Dimension mww = 0, mwh = 0;
-            XtVaGetValues(mw, XmNwidth, &mww, XmNheight, &mwh, NULL);
-            printf("appMain: w=%d h=%d managed=%d realized=%d class=%s\n",
-                mww, mwh, XtIsManaged(mw), XtIsRealized(mw) ? 1 : 0,
-                XtClass(mw) ? "?" : "NULL");
-        }
-    }
-    /* Print workArea info */
-    {
-        Widget wa = XtNameToWidget(shell, "*workArea");
-        if (wa) {
-            Dimension waw = 0, wah = 0;
-            XtVaGetValues(wa, XmNwidth, &waw, XmNheight, &wah, NULL);
-            printf("workArea: w=%d h=%d managed=%d realized=%d\n",
-                waw, wah, XtIsManaged(wa), XtIsRealized(wa) ? 1 : 0);
-        }
-    }
-    /* Print menuBar info */
-    {
-        Widget mb = XtNameToWidget(shell, "*menuBar");
-        if (mb) {
-            Dimension mbw = 0, mbh = 0;
-            Position mbx = 0, mby = 0;
-            XtVaGetValues(mb, XmNwidth, &mbw, XmNheight, &mbh, XmNx, &mbx, XmNy, &mby, NULL);
-            printf("menuBar: x=%d y=%d w=%d h=%d managed=%d realized=%d\n",
-                mbx, mby, mbw, mbh, XtIsManaged(mb), XtIsRealized(mb) ? 1 : 0);
-        }
-    }
-
-    /* Flush display to ensure all events are queued */
-    XFlush(XtDisplayOfObject(shell));
-    XSync(XtDisplayOfObject(shell), False);
-
-    /* Process available events synchronously (don't block if none) */
-    printf("Processing initial events...\n");
-    {
-        int n;
-        for (n = 0; n < 20; n++) {
-            XEvent ev;
-            if (!XPending(XtDisplayOfObject(shell))) break;
-            XNextEvent(XtDisplayOfObject(shell), &ev);
-            printf("  event[%d]: type=%d (%s) win=%lu\n", n, ev.type, ev_name(ev.type), (unsigned long)ev.xany.window);
-            XtDispatchEvent(&ev);
-        }
-        printf("Processed %d events\n", n);
-    }
-
-    /* Print event counts */
-    printf("Event counts so far:\n");
-    { int t; for (t = 0; t < 128; t++) if (ev_count[t]) printf("  type %d (%s): %d\n", t, ev_name(t), ev_count[t]); }
-
-    printf("entering XtAppMainLoop...\n");
-    /* Arm a 2-second timer to check if Expose events arrive during main loop */
-    XtAppAddTimeOut(appContext, 2000, report_timer, (XtPointer)shell);
     XtAppMainLoop(appContext);
 
     return 0;    /* make compiler happy */
