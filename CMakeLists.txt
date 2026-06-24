@@ -221,6 +221,59 @@ add_custom_command(
 
 add_custom_target(em_x11_static_build DEPENDS "${EM_X11_SRC_ABSOLUTE}/build/artifacts/.stamp")
 
+# --- UIL compiler (wasm, runs via Node.js) ---
+# Building uil as wasm ensures sizeof(long)=4, matching the wasm MRM reader.
+# The wasm uil produces UID files that are byte-identical to what the reader expects,
+# eliminating all 64-bit/32-bit binary format mismatches.
+file(GLOB UIL_SOURCES "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/clients/uil/*.c")
+
+# UilParser.c is a symlink to UilMain.c — exclude to avoid duplicate symbols
+list(REMOVE_ITEM UIL_SOURCES
+    "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/clients/uil/UilParser.c"
+)
+
+add_executable(uil ${UIL_SOURCES}
+    "${CMAKE_SOURCE_DIR}/native/uil_x11_stubs.c"
+)
+
+target_include_directories(uil PRIVATE
+    "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/clients/uil"  # UilDefI.h etc.
+    "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/tools/wml"    # UilDBDef.h
+    "${MOTIF_SRC}/lib"              # <Xm/...h>, <Mrm/...h>
+    "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/include"  # Dt/ headers
+    "${CMAKE_BINARY_DIR}/include"   # generated Xm.h
+    "${CMAKE_SOURCE_DIR}/native"    # config.h
+    "${EM_X11_INCLUDE_DIR}"         # em-x11 X11 headers
+    ${EM_X11_THIRD_PARTY_INCLUDES}  # Xt/Xmu/Xpm etc.
+)
+
+target_compile_definitions(uil PRIVATE HAVE_CONFIG_H=1 linux=1)
+target_compile_options(uil PRIVATE -w -g)
+
+# Node.js command-line tool: access real filesystem, exit after main()
+# Link against Xm + em-x11 prebuilt archives (Xt, X11, etc.)
+# Uses the same port script as the browser demos, but with Node.js settings.
+target_link_libraries(uil PRIVATE Xm)
+target_link_options(uil PRIVATE
+    "SHELL:--use-port=${EM_X11_SRC_ABSOLUTE}/tools/ports/em_x11.py"
+    "SHELL:-s NODERAWFS"
+    "SHELL:-s EXIT_RUNTIME=1"
+    "SHELL:-s WASM=1"
+    "SHELL:-s ENVIRONMENT=node"
+    "SHELL:-s ERROR_ON_UNDEFINED_SYMBOLS=0"
+    "SHELL:-s USE_LIBJPEG=1"
+    "SHELL:-s USE_LIBPNG=1"
+    "SHELL:-Wl,--error-limit=0"
+)
+add_dependencies(uil em_x11_static_build)
+
+# Rename .js → .cjs so Node treats as CommonJS (project package.json has "type": "module")
+add_custom_command(TARGET uil POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rename
+        "${CMAKE_BINARY_DIR}/artifacts/uil.js"
+        "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
+)
+
 # --- Periodic table demo ---
 
 option(BUILD_EXAMPLES "Build example applications" ON)
