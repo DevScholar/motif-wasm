@@ -278,6 +278,17 @@ add_custom_command(TARGET uil POST_BUILD
 
 option(BUILD_EXAMPLES "Build example applications" ON)
 
+# Motif virtual key bindings: on real Linux these come from the Motif
+# package's xmbind.alias -> vendor-specific file chain.  We preload the
+# equivalent into the wasm filesystem so Motif's _XmVirtKeysLoadFallbackBindings
+# finds complete bindings (including osfSelectAll/Copy/Cut/Paste/DeselectAll
+# that the hardcoded defaultFallbackBindings in Transltns.c omits).
+set(MOTIF_BINDINGS_DIR "${CMAKE_SOURCE_DIR}/examples/bindings")
+set(MOTIF_BINDINGS_PRELOAD
+    "${MOTIF_BINDINGS_DIR}/xmbind.alias@/usr/lib/Xm/bindings/xmbind.alias"
+    "${MOTIF_BINDINGS_DIR}/xmbind@/usr/lib/Xm/bindings/xmbind"
+)
+
 if(BUILD_EXAMPLES)
     add_executable(periodic
         "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.c"
@@ -297,6 +308,7 @@ if(BUILD_EXAMPLES)
         PRELOAD_FILES
             "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.uid@/periodic.uid"
             "${CMAKE_SOURCE_DIR}/examples/periodic/XmdPeriodic.ad@/usr/lib/X11/app-defaults/XmdPeriodic"
+            ${MOTIF_BINDINGS_PRELOAD}
     )
     add_dependencies(periodic em_x11_static_build)
 
@@ -334,6 +346,8 @@ if(BUILD_EXAMPLES)
     em_x11_finalize_demo(widget-gallery
         EXPORT_NAME createWidgetGalleryModule
         LIBS Xm Xmu Xt Xpm SM ICE Xext Xft Xrender fontconfig X11
+        PRELOAD_FILES
+            ${MOTIF_BINDINGS_PRELOAD}
     )
     add_dependencies(widget-gallery em_x11_static_build)
 
