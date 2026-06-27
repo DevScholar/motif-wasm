@@ -9,7 +9,7 @@
 # which is what CMakeLists.txt actually compiles.
 #
 # Prerequisites:
-#   - curl, tar, gcc (for makestrs), node (for wasm uil at runtime)
+#   - curl, tar, python3 (for XmI.h macro patch), gcc (for makestrs), node (for wasm uil at runtime)
 #
 # Idempotent: skips download if the target source already exists;
 #             skips staging if .fetched sentinel exists.
@@ -23,12 +23,19 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MOTIF_SRC="${MOTIF_SRC:-$REPO_ROOT/ignored-area/motif-full}"
-MOTIF_TARBALL="https://github.com/thentenaar/motif/archive/refs/tags/v2.5.2.tar.gz"
+MOTIF_TARBALL_URL="https://github.com/thentenaar/motif/archive/refs/tags/v2.5.2.tar.gz"
+MOTIF_TARBALL="motif-2.5.2.tar.gz"
 MOTIF_VERSION="2.5.2"
+TARBALL_CACHE="$REPO_ROOT/ignored-area/tarballs"
 
 log()  { printf '    %s\n' "$*"; }
 warn() { printf '    WARNING: %s\n' "$*"; }
 die()  { printf 'fetch-motif: %s\n' "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"; }
+
+have curl
+have tar
+have python3
 
 # --- Download motif tarball (if not already present) ---
 
@@ -37,15 +44,32 @@ MOTIF_SENTINEL="$MOTIF_SRC/.fetched"
 if [ -f "$MOTIF_SENTINEL" ]; then
   log "motif ${MOTIF_VERSION} already downloaded at $MOTIF_SRC"
 else
-  if ! command -v curl >/dev/null 2>&1; then
-    die "curl not found"
+  mkdir -p "$TARBALL_CACHE"
+
+  if [ -f "$TARBALL_CACHE/$MOTIF_TARBALL" ]; then
+    log "using cached $MOTIF_TARBALL"
+  else
+    attempt=1
+    while [ $attempt -le 3 ]; do
+      log "downloading $MOTIF_TARBALL_URL (attempt $attempt/3)"
+      if curl -fsSL --connect-timeout 30 --max-time 600 \
+          -o "$TARBALL_CACHE/$MOTIF_TARBALL" "$MOTIF_TARBALL_URL"; then
+        break
+      fi
+      if [ $attempt -eq 3 ]; then
+        die "download failed after 3 attempts: $MOTIF_TARBALL_URL"
+      fi
+      warn "download failed, retrying in 3s..."
+      sleep 3
+      attempt=$((attempt + 1))
+    done
   fi
-  log "downloading motif ${MOTIF_VERSION} -> $MOTIF_SRC"
+
+  log "extracting motif ${MOTIF_VERSION}"
   rm -rf "$MOTIF_SRC"
   mkdir -p "$MOTIF_SRC"
 
-  curl -L --silent --show-error "$MOTIF_TARBALL" \
-    | tar -xz --strip-components=1 -C "$MOTIF_SRC" 2>&1 | sed 's/^/      /'
+  tar -xzf "$TARBALL_CACHE/$MOTIF_TARBALL" --strip-components=1 -C "$MOTIF_SRC" 2>&1 | sed 's/^/      /'
 
   touch "$MOTIF_SENTINEL"
   log "motif ${MOTIF_VERSION} downloaded"
