@@ -223,6 +223,9 @@ main(int argc, char *argv[])
                                  argv,
                                  fallbackResources,
                                  sessionShellWidgetClass,
+                                 /* Custom window size for our demo — not part of original Motif periodic */
+                                 XmNwidth, 1000,
+                                 XmNheight, 748,
                                  NULL);
 
     if (MrmOpenHierarchy (1, mrmFile, NULL, &mrmId) != MrmSUCCESS) exit(0);
