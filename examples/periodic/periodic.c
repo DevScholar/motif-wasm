@@ -41,6 +41,7 @@ static char rcsid[] = "$XConsortium: periodic.c /main/8 1996/04/22 23:28:50 pasc
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <Xm/Xm.h>
 #include <Xm/ComboBox.h>
 #include <Xm/RowColumn.h>
@@ -48,7 +49,6 @@ static char rcsid[] = "$XConsortium: periodic.c /main/8 1996/04/22 23:28:50 pasc
 #include <Xm/ScrolledW.h>
 #include <Xm/ToggleB.h>
 #include <Mrm/MrmPublic.h>
-
 
 typedef struct _DrawData {
 	GC gc;
@@ -231,6 +231,7 @@ main(int argc, char *argv[] )
     if (MrmOpenHierarchy (1, mrmFile, NULL, &mrmId) != MrmSUCCESS) exit(0);
     MrmRegisterNames(mrmNames, XtNumber(mrmNames));
     MrmFetchWidget (mrmId, "appMain", shell, &appMain, &mrmClass);
+
     XtManageChild(appMain);
     XtRealizeWidget(shell);
 
