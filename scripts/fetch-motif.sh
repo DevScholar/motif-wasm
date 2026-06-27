@@ -137,18 +137,18 @@ if [ -d "$PERIODIC_SRC_DIR" ]; then
   log "compiling periodic UIL -> UID (via wasm uil)"
   if [ ! -f "$WASM_UIL" ]; then
     warn "wasm uil not found at $WASM_UIL -- skipping UID generation (CMakeLists.txt will build uil and generate periodic.uid)"
-    return 0
-  fi
-  if ! command -v node >/dev/null 2>&1; then
-    die "node not found. Node.js is required to run the wasm uil compiler."
-  fi
-  mkdir -p "$PERIODIC_OUT_DIR"
+  else
+    if ! command -v node >/dev/null 2>&1; then
+      die "node not found. Node.js is required to run the wasm uil compiler."
+    fi
+    mkdir -p "$PERIODIC_OUT_DIR"
 
-  node "$WASM_UIL" \
-    -o "$PERIODIC_OUT_DIR/periodic.uid" \
-    "$PERIODIC_SRC_DIR/periodic.uil" \
-    "-I$PERIODIC_SRC_DIR" \
-    "-I$STAGED_MOTIF/lib/Xm" 2>&1 || warn "UIL compilation failed"
+    node "$WASM_UIL" \
+      -o "$PERIODIC_OUT_DIR/periodic.uid" \
+      "$PERIODIC_SRC_DIR/periodic.uil" \
+      "-I$PERIODIC_SRC_DIR" \
+      "-I$STAGED_MOTIF/lib/Xm" 2>&1 || warn "UIL compilation failed"
+  fi
 else
   warn "periodic demo not found at $PERIODIC_SRC_DIR"
 fi
