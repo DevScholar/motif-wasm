@@ -35,7 +35,6 @@ XmdPeriodic*toggleButtonControls.spacing:            0
 ?.toolTipPostDelay: 10
 ?.toolTipPostDuration: 1000
 ?.TipShell.TipLabel.background: yellow
-*background: yello
 *toolTipString: Jimmy was here
 XmdPeriodic*fontList:                      *-*-*-medium-r-*-*-*-100-*-*-p-*-*-*
 XmdPeriodic*HeaderDA*fontList:             *-*-*-bold-r-*-*-*-100-*-*-p-*-*-*
