@@ -12,7 +12,7 @@ pnpm approve-builds
 pnpm install
 
 # Build libXm + periodic demo
-pnpm build:motif
+pnpm build
 
 # Dev server (default Vite port 5173)
 pnpm dev

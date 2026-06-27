@@ -82,14 +82,26 @@ else
   fi
 fi
 
-# --- Step 3: build em-x11 default-host IIFE (vite) ---
-# Motif-wasm links this as --pre-js.  If missing, the Host never
-# auto-creates and the demo stays blank (no canvas, no windows).
+# --- Step 3: resolve em-x11 path ---
+# cmake needs this for step 4; step 3 also uses it to build the host IIFE.
 
 EM_X11_ABS="$(cd "${EM_X11_SRC:-$REPO_ROOT/../em-x11}" && pwd)"
 
-log "building em-x11-default-host.js..."
-( cd "$EM_X11_ABS" && npx vite build -c vite.host.config.ts )
+# --- Step 3 (continued): build em-x11 default-host IIFE (vite) ---
+# Motif-wasm links this as --pre-js.  If missing, the Host never
+# auto-creates and the demo stays blank (no canvas, no windows).
+# The host IIFE is optional — em_x11_demo.cmake and the port script
+# both skip it gracefully when the file doesn't exist.  We try to build
+# it but don't abort the whole build if this step fails (e.g. em-x11
+# TypeScript sources are not set up).
+
+if [ -f "$EM_X11_ABS/vite.host.config.ts" ]; then
+    log "building em-x11-default-host.js..."
+    ( cd "$EM_X11_ABS" && npx vite build -c vite.host.config.ts ) ||
+        warn "em-x11-default-host.js build failed — demos will need manual Host setup"
+else
+    warn "vite.host.config.ts not found at $EM_X11_ABS — skipping host IIFE build"
+fi
 
 # --- Step 4: configure (if stale) ---
 

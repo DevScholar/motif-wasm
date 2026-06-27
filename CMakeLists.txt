@@ -274,6 +274,25 @@ add_custom_command(TARGET uil POST_BUILD
         "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
 )
 
+# Generate periodic.uid from periodic.uil using the wasm uil compiler.
+# This must run after uil is built, so the UID file exists before the
+# periodic demo links (the UID is --preload-file'd into MEMFS).
+set(PERIODIC_UID "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uid")
+set(PERIODIC_UIL "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uil")
+
+add_custom_command(
+    OUTPUT "${PERIODIC_UID}"
+    COMMAND node "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
+        -o "${PERIODIC_UID}"
+        "${PERIODIC_UIL}"
+        "-I${CMAKE_SOURCE_DIR}/examples/twm-periodic"
+        "-I${MOTIF_SRC}/lib/Xm"
+    DEPENDS uil
+    COMMENT "Generating periodic.uid via wasm uil"
+)
+
+add_custom_target(generate_periodic_uid DEPENDS "${PERIODIC_UID}")
+
 # --- Periodic table demo ---
 
 option(BUILD_EXAMPLES "Build example applications" ON)
@@ -360,10 +379,11 @@ if(BUILD_EXAMPLES)
             "${CMAKE_SOURCE_DIR}/examples/twm-periodic/XmdPeriodic.ad@/usr/lib/X11/app-defaults/XmdPeriodic"
             ${MOTIF_BINDINGS_PRELOAD}
     )
-    add_dependencies(periodic em_x11_static_build)
+    add_dependencies(periodic em_x11_static_build generate_periodic_uid)
 
     set_property(TARGET periodic APPEND PROPERTY LINK_DEPENDS
         "${EM_X11_SRC_ABSOLUTE}/build/artifacts/.stamp"
+        "${PERIODIC_UID}"
     )
 
     target_link_options(periodic PRIVATE
