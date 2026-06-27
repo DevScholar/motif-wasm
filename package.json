@@ -10,6 +10,7 @@
     "pnpm": ">=9"
   },
   "scripts": {
+    "postinstall": "bash scripts/strip-git.sh",
     "build": "bash scripts/build.sh Release",
     "build:debug": "bash scripts/build.sh Debug",
     "dev": "vite",
