@@ -272,7 +272,10 @@ add_custom_command(TARGET uil POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E rename
         "${CMAKE_BINARY_DIR}/artifacts/uil.js"
         "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
+    BYPRODUCTS "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
 )
+
+find_program(NODE_EXE node REQUIRED)
 
 # Generate periodic.uid from periodic.uil using the wasm uil compiler.
 # This must run after uil is built, so the UID file exists before the
@@ -282,12 +285,13 @@ set(PERIODIC_UIL "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uil")
 
 add_custom_command(
     OUTPUT "${PERIODIC_UID}"
-    COMMAND node "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
+    COMMAND ${NODE_EXE} "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
         -o "${PERIODIC_UID}"
         "${PERIODIC_UIL}"
         "-I${CMAKE_SOURCE_DIR}/examples/twm-periodic"
         "-I${MOTIF_SRC}/lib/Xm"
-    DEPENDS uil
+        "-I${MOTIF_SRC}/demos/programs/periodic"
+    DEPENDS "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
     COMMENT "Generating periodic.uid via wasm uil"
 )
 
