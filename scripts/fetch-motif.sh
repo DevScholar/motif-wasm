@@ -9,8 +9,7 @@
 # which is what CMakeLists.txt actually compiles.
 #
 # Prerequisites:
-#   - uil (Motif UIL compiler): sudo apt install uil
-#   - curl, tar
+#   - curl, tar, gcc (for makestrs), node (for wasm uil at runtime)
 #
 # Idempotent: skips download if the target source already exists;
 #             skips staging if .fetched sentinel exists.
@@ -137,7 +136,8 @@ WASM_UIL="$REPO_ROOT/build/artifacts/uil.cjs"
 if [ -d "$PERIODIC_SRC_DIR" ]; then
   log "compiling periodic UIL -> UID (via wasm uil)"
   if [ ! -f "$WASM_UIL" ]; then
-    die "wasm uil not found at $WASM_UIL. Build it first: cd $REPO_ROOT && emcmake cmake -S . -B build && cmake --build build --target uil"
+    warn "wasm uil not found at $WASM_UIL -- skipping UID generation (CMakeLists.txt will build uil and generate periodic.uid)"
+    return 0
   fi
   if ! command -v node >/dev/null 2>&1; then
     die "node not found. Node.js is required to run the wasm uil compiler."
