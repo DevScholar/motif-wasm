@@ -22,7 +22,6 @@ Open `http://localhost:5173/examples/periodic/`.
 
 ## Prerequisites
 
-- **WSL** (Linux required — `emcmake`, `bash`, `uil`)
+- **WSL** (Linux required — `emcmake`, `bash`, `gcc`)
 - Emscripten SDK (`emsdk`), activated
-- `uil` (Motif UIL compiler): `sudo apt install uil`
 - em-x11 sibling directory (or set `EM_X11_SRC`)
