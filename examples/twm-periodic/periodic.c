@@ -6,7 +6,7 @@
  * These libraries and programs are free software; you can
  * redistribute them and/or modify them under the terms of the GNU
  * Lesser General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option)
+ * Foundation; either version 2.1 of the License, or (at your option)
  * any later version.
  *
  * These libraries and programs are distributed in the hope that
@@ -41,7 +41,6 @@ static char rcsid[] = "$XConsortium: periodic.c /main/8 1996/04/22 23:28:50 pasc
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <Xm/Xm.h>
 #include <Xm/ComboBox.h>
 #include <Xm/RowColumn.h>
@@ -151,24 +150,24 @@ static MrmHierarchy mrmId;
 static char *mrmFile[]={"periodic.uid"};
 static MrmCode mrmClass;
 static MRMRegisterArg mrmNames[] = {
-        {"InitPopupCb", (XtPointer)InitPopupCb },
-        {"PopdownCb", (XtPointer)PopdownCb },
-        {"UnmanageCb", (XtPointer)UnmanageCb },
-        {"ManageCb", (XtPointer)ManageCb },
-        {"DaExposeCb", (XtPointer)DaExposeCb },
-        {"DaResizeCb", (XtPointer)DaResizeCb },
-        {"DbExposeCb", (XtPointer)DbExposeCb },
-        {"DbResizeCb", (XtPointer)DbResizeCb },
-        {"ScaleCb", (XtPointer)ScaleCb },
-        {"SetScaleCb", (XtPointer)SetScaleCb },
-        {"ViewCb", (XtPointer)ViewCb },
-        {"LayoutCb", (XtPointer)LayoutCb },
-        {"ToggleLightsCb", (XtPointer)ToggleLightsCb },
-        {"ShowCb", (XtPointer)ShowCb },
-        {"ExitCb", (XtPointer)ExitCb },
-	{"ScrollVisibleCb", (XtPointer)ScrollVisibleCb },
-        {"ToggleValueChangedCb", (XtPointer)ToggleValueChangedCb },
-        {"ToggleControlCb", (XtPointer)ToggleControlCb }
+        {"InitPopupCb", (XPointer)InitPopupCb },
+        {"PopdownCb", (XPointer)PopdownCb },
+        {"UnmanageCb", (XPointer)UnmanageCb },
+        {"ManageCb", (XPointer)ManageCb },
+        {"DaExposeCb", (XPointer)DaExposeCb },
+        {"DaResizeCb", (XPointer)DaResizeCb },
+        {"DbExposeCb", (XPointer)DbExposeCb },
+        {"DbResizeCb", (XPointer)DbResizeCb },
+        {"ScaleCb", (XPointer)ScaleCb },
+        {"SetScaleCb", (XPointer)SetScaleCb },
+        {"ViewCb", (XPointer)ViewCb },
+        {"LayoutCb", (XPointer)LayoutCb },
+        {"ToggleLightsCb", (XPointer)ToggleLightsCb },
+        {"ShowCb", (XPointer)ShowCb },
+        {"ExitCb", (XPointer)ExitCb },
+	{"ScrollVisibleCb", (XPointer)ScrollVisibleCb },
+        {"ToggleValueChangedCb", (XPointer)ToggleValueChangedCb },
+        {"ToggleControlCb", (XPointer)ToggleControlCb }
 };
 
 static String fallbackResources[] = {
@@ -210,14 +209,12 @@ static Widget shell;
 static unsigned setting_toggle = 0;
 
 int
-main(int argc, char *argv[] )
+main(int argc, char *argv[])
 {
     Widget appMain;
 
-    XtSetLanguageProc(NULL, (XtLanguageProc) NULL, NULL);
-
-    MrmInitialize ();
-
+    XtSetLanguageProc(NULL, NULL, NULL);
+    MrmInitialize();
     shell = XtVaOpenApplication( &appContext,
                                  APP_CLASS,
                                  NULL,
@@ -226,34 +223,14 @@ main(int argc, char *argv[] )
                                  argv,
                                  fallbackResources,
                                  sessionShellWidgetClass,
-                                 NULL );
+                                 NULL);
 
     if (MrmOpenHierarchy (1, mrmFile, NULL, &mrmId) != MrmSUCCESS) exit(0);
     MrmRegisterNames(mrmNames, XtNumber(mrmNames));
-    MrmFetchWidget (mrmId, "appMain", shell, &appMain, &mrmClass);
-
+    MrmFetchWidget(mrmId, "appMain", shell, &appMain, &mrmClass);
     XtManageChild(appMain);
     XtRealizeWidget(shell);
-
-    /* Constrain shell to screen if no WM is running.
-     * Xt's RootGeometryManager accepts any child-requested size;
-     * screen constraining is normally the WM's job (Inter-Client
-     * Communication Conventions Manual §4.1.2.3).  Without a WM we
-     * take care of it ourselves. */
-    {
-        Dimension sw = (Dimension)DisplayWidth(XtDisplayOfObject(shell), 0);
-        Dimension sh = (Dimension)DisplayHeight(XtDisplayOfObject(shell), 0);
-        Dimension w = 0, h = 0;
-        XtVaGetValues(shell, XmNwidth, &w, XmNheight, &h, NULL);
-        if (w > sw || h > sh) {
-            if (w > sw) w = sw;
-            if (h > sh) h = sh;
-            XtVaSetValues(shell, XmNwidth, w, XmNheight, h, NULL);
-        }
-    }
-
     XtAppMainLoop(appContext);
-
     return 0;    /* make compiler happy */
 }
 
@@ -798,9 +775,7 @@ get_color(Widget widget,
   Boolean result = False;
   char *text;
 
-  text = XmStringUnparse(name, NULL, XmCHARSET_TEXT, XmCHARSET_TEXT, NULL, 0, XmOUTPUT_ALL);
-  if (text)
-    {
+  if ((text = XmStringUnparse(name, NULL, XmCHARSET_TEXT, XmCHARSET_TEXT, NULL, 0, XmOUTPUT_ALL))) {
       XrmValue from, to;
 
       from.size = sizeof(char*);

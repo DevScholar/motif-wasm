@@ -131,7 +131,7 @@ fi
 # wasm MRM reader.
 
 PERIODIC_SRC_DIR="$STAGED_MOTIF/demos/programs/periodic"
-PERIODIC_OUT_DIR="$REPO_ROOT/examples/periodic"
+PERIODIC_OUT_DIR="$REPO_ROOT/examples/twm-periodic"
 WASM_UIL="$REPO_ROOT/build/artifacts/uil.cjs"
 
 if [ -d "$PERIODIC_SRC_DIR" ]; then

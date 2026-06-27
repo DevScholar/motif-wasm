@@ -289,9 +289,59 @@ set(MOTIF_BINDINGS_PRELOAD
     "${MOTIF_BINDINGS_DIR}/xmbind@/usr/lib/Xm/bindings/xmbind"
 )
 
+# --- twm window manager (build artifact, not a standalone demo) ---
+# Source comes from em-x11's vendored X.Org twm, fetched by its
+# scripts/fetch-third-party.sh. motif-wasm already depends on em-x11
+# being built, so the source is guaranteed to exist.
+
 if(BUILD_EXAMPLES)
+    set(TWM_SRC_DIR "${EM_X11_SRC}/ignored-area/third-party/twm/src")
+
+    add_executable(twm
+        ${TWM_SRC_DIR}/add_window.c
+        ${TWM_SRC_DIR}/cursor.c
+        ${TWM_SRC_DIR}/deftwmrc.c
+        ${TWM_SRC_DIR}/events.c
+        ${TWM_SRC_DIR}/gc.c
+        ${TWM_SRC_DIR}/gram.c
+        ${TWM_SRC_DIR}/iconmgr.c
+        ${TWM_SRC_DIR}/icons.c
+        ${TWM_SRC_DIR}/lex.c
+        ${TWM_SRC_DIR}/list.c
+        ${TWM_SRC_DIR}/menus.c
+        ${TWM_SRC_DIR}/parse.c
+        ${TWM_SRC_DIR}/resize.c
+        ${TWM_SRC_DIR}/session.c
+        ${TWM_SRC_DIR}/twm.c
+        ${TWM_SRC_DIR}/util.c
+    )
+
+    target_compile_definitions(twm PRIVATE HAVE_CONFIG_H=1)
+
+    target_include_directories(twm PRIVATE
+        ${EM_X11_SRC}/ignored-area/third-party/twm
+        ${TWM_SRC_DIR}
+        ${EM_X11_INCLUDE_DIR}
+        ${EM_X11_THIRD_PARTY_INCLUDES}
+    )
+
+    target_compile_options(twm PRIVATE -w)
+
+    em_x11_finalize_demo(twm
+        EXPORT_NAME createTwmModule
+        LIBS Xmu Xt Xext X11
+        EXTRA_FUNCTIONS _em_x11_push_destroy_notify
+    )
+    add_dependencies(twm em_x11_static_build)
+
+    set_property(TARGET twm APPEND PROPERTY LINK_DEPENDS
+        "${EM_X11_SRC_ABSOLUTE}/build/artifacts/.stamp"
+    )
+
+    # --- Periodic wasm artifact (spawned by twm-periodic demo) ---
+
     add_executable(periodic
-        "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.c"
+        "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.c"
         "${CMAKE_SOURCE_DIR}/native/motif_xlib_stubs.c"
     )
 
@@ -306,22 +356,16 @@ if(BUILD_EXAMPLES)
         EXPORT_NAME createPeriodicModule
         LIBS Xm Xmu Xt Xpm SM ICE Xext Xft Xrender fontconfig X11
         PRELOAD_FILES
-            "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.uid@/periodic.uid"
-            "${CMAKE_SOURCE_DIR}/examples/periodic/XmdPeriodic.ad@/usr/lib/X11/app-defaults/XmdPeriodic"
+            "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uid@/periodic.uid"
+            "${CMAKE_SOURCE_DIR}/examples/twm-periodic/XmdPeriodic.ad@/usr/lib/X11/app-defaults/XmdPeriodic"
             ${MOTIF_BINDINGS_PRELOAD}
     )
     add_dependencies(periodic em_x11_static_build)
 
-    # Force cmake to relink when em-x11 archives change. Without this,
-    # cmake --build only checks .o timestamps and won't relink when the
-    # external em-x11 .a files are newer (they come via the port script,
-    # not as cmake target dependencies).
     set_property(TARGET periodic APPEND PROPERTY LINK_DEPENDS
         "${EM_X11_SRC_ABSOLUTE}/build/artifacts/.stamp"
     )
 
-    # --whole-archive keeps all libXm symbols so Xlib refs resolve
-    # against the later X11/Xt archives.
     target_link_options(periodic PRIVATE
         "SHELL:-Wl,--whole-archive ${CMAKE_BINARY_DIR}/artifacts/libXm.a -Wl,--no-whole-archive"
         "SHELL:-s USE_LIBJPEG=1"

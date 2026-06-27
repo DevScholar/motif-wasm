@@ -85,6 +85,12 @@ export default defineConfig({
   root: ".",
   publicDir: "public",
 
+  resolve: {
+    alias: {
+      '@em-x11': resolve(__dirname, '../em-x11/src'),
+    },
+  },
+
   plugins: [externalizeArtifacts(), serveBuildArtifactsRaw(), printDemoUrls()],
 
   server: {
@@ -93,7 +99,8 @@ export default defineConfig({
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
     fs: {
-      allow: [".", "build"],
+      // em-x11 is a sibling project; twm-session imports from its src/
+      allow: [".", "build", "../em-x11"],
     },
   },
 
