@@ -280,8 +280,8 @@ find_program(NODE_EXE node REQUIRED)
 # Generate periodic.uid from periodic.uil using the wasm uil compiler.
 # This must run after uil is built, so the UID file exists before the
 # periodic demo links (the UID is --preload-file'd into MEMFS).
-set(PERIODIC_UID "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uid")
-set(PERIODIC_UIL "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uil")
+set(PERIODIC_UID "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.uid")
+set(PERIODIC_UIL "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.uil")
 
 add_custom_command(
     OUTPUT "${PERIODIC_UID}"
@@ -361,10 +361,10 @@ if(BUILD_EXAMPLES)
         "${EM_X11_SRC_ABSOLUTE}/build/artifacts/.stamp"
     )
 
-    # --- Periodic wasm artifact (spawned by twm-periodic demo) ---
+    # --- Periodic wasm artifact (spawned by periodic demo) ---
 
     add_executable(periodic
-        "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.c"
+        "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.c"
         "${CMAKE_SOURCE_DIR}/native/motif_xlib_stubs.c"
     )
 
@@ -379,8 +379,8 @@ if(BUILD_EXAMPLES)
         EXPORT_NAME createPeriodicModule
         LIBS Xm Xmu Xt Xpm SM ICE Xext Xft Xrender fontconfig X11
         PRELOAD_FILES
-            "${CMAKE_SOURCE_DIR}/examples/twm-periodic/periodic.uid@/periodic.uid"
-            "${CMAKE_SOURCE_DIR}/examples/twm-periodic/XmdPeriodic.ad@/usr/lib/X11/app-defaults/XmdPeriodic"
+            "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.uid@/periodic.uid"
+            "${CMAKE_SOURCE_DIR}/examples/periodic/XmdPeriodic.ad@/usr/lib/X11/app-defaults/XmdPeriodic"
             ${MOTIF_BINDINGS_PRELOAD}
     )
     add_dependencies(periodic em_x11_static_build generate_periodic_uid)
@@ -429,4 +429,5 @@ if(BUILD_EXAMPLES)
         "SHELL:-s USE_LIBPNG=1"
         "SHELL:-s STACK_SIZE=524288"
     )
+
 endif()
