@@ -1,4 +1,4 @@
-# AGENTS.md — instructions for AI agents working on em-x11
+# AGENTS.md — instructions for AI agents working on motif-wasm
 
 ## Environment
 
@@ -8,14 +8,12 @@
 
 ## Prerequisites (host tools)
 
-The build script requires these host tools. They are **not** auto-installed — the user must install them manually:
+The build requires these host tools. They are **not** auto-installed — the user must install them manually:
 
-| Tool | Why | Debian/Ubuntu | Fedora | macOS |
-|------|-----|---------------|--------|-------|
-| `cc` / `gcc` / `clang` | Compile `makestrs` from libXt source to generate `StringDefs.c/.h`, `Shell.h` | `sudo apt install gcc` | `sudo dnf install gcc` | `xcode-select --install` |
-| `bison` | Required by some third-party `configure` scripts | `sudo apt install bison` | `sudo dnf install bison` | `brew install bison` |
-
-`fetch-third-party.sh` checks for these tools at startup and prints a clear error message with install instructions if any are missing. It never attempts to install them automatically.
+| Tool | Why | Debian/Ubuntu | Fedora |
+|------|-----|---------------|--------|
+| `gcc` | Compile `makestrs` from Motif source to generate `StringDefs.c/.h` | `sudo apt install gcc` | `sudo dnf install gcc` |
+| `node` | Run the wasm `uil` compiler at build time | `sudo apt install nodejs` | `sudo dnf install nodejs` |
 
 ## One-step setup
 
@@ -25,71 +23,68 @@ After cloning and installing the prerequisites above, a single command prepares 
 pnpm install
 ```
 
-`postinstall` runs `bash scripts/fetch-third-party.sh`, which downloads and extracts all third-party X.Org sources and runs `makestrs` to generate files the upstream tarball doesn't ship. No separate fetch step needed.
+`postinstall` runs `bash scripts/strip-git.sh` (cleans up reproducibility-test checkouts) and `pnpm approve-builds` must be run once first (pnpm 11 blocks build scripts by default). The Motif source is fetched on first build by `scripts/fetch-motif.sh`, triggered automatically by `scripts/build.sh`.
 
 ## Directory layout
 
 ```
-em-x11/
+motif-wasm/
 ├── AGENTS.md                  — this file
-├── CMakeLists.txt             — root build: native/ + third-party/ + examples/
-├── package.json               — scripts: postinstall, build, build:examples, dev
-├── patches/                   — patches applied on top of upstream third-party sources
-│   └── libXt/                 —   one subdirectory per patched library
+├── CMakeLists.txt             — root build: libXm + demos (periodic, widget-gallery)
+├── package.json               — scripts: postinstall, build, dev
 ├── scripts/
-│   ├── fetch-third-party.sh   — populates ignored-area/third-party/ from tarballs
-│   └── em-x11-config.cache     — autotools cache for cross-compilation configure
-├── ignored-area/              — gitignored; created by fetch-third-party.sh
-│   ├── temp/                 —   temporary tarball staging during fetch (cleaned per-package)
-│   └── third-party/           —   extracted upstream X.Org sources (libXt, xeyes, …)
-├── native/                    — em-x11's own Xlib implementation (C)
-│   ├── CMakeLists.txt
-│   ├── include/               —   public X11 headers
-│   ├── em_x11/                 —   em-x11–specific C sources (bridges, display, …)
-│   ├── dix/                   —   device-independent X layer
-│   ├── libX11/                —   Xlib client API
-│   ├── Xext/, render/, xkb/, glx/ — extension stubs
-├── examples/                  — demo applications (formerly demos/)
-│   ├── hello/                 —   minimal Xlib window
-│   ├── xt-hello/              —   Xt Shell + widget
-│   ├── xeyes/, xcalc/         —   classic X apps
-│   ├── glxgears/              —   OpenGL demo
-│   └── twm-session/           —   combined twm + xeyes + xcalc
-├── src/                       — TypeScript host/runtime (browser side)
-│   ├── api/                   —   public JS API
-│   ├── host/                  —   window tree, compositor, input routing, …
-│   └── runtime/               —   per-app launchers, MEMFS staging
-├── cmake/
-│   ├── em_x11_demo.cmake       — shared CMake helper for all examples
-│   └── third-party/           — CMakeLists.txt for each third-party library, copied
-│                                 into ignored-area/third-party/ during fetch
-├── references/                — gitignored; strictly for reference only; must NOT be used by
-│                                 any build script or fetch-third-party.sh
+│   ├── build.sh               — anti-stale cmake configure + build
+│   ├── fetch-motif.sh         — downloads thentenaar/motif v2.5.2, stages into ignored-area/
+│   ├── strip-git.sh           — postinstall hook for reproducibility-tests cleanup
+│   ├── em-motif-config.cache  — gitignored; configure cache
+│   └── *.py                   — UID/wasm analysis utilities
+├── native/                    — project-owned C sources
+│   ├── config.h               —   HAVE_* defines for wasm32
+│   ├── motif_xlib_stubs.c     —   Xlib stubs needed by Motif demos
+│   ├── uil_x11_stubs.c        —   X11 stubs needed by wasm uil compiler
+│   ├── include/X11/Xft/       —   shadow Xft.h (before em-x11's)
+│   └── generated/Xm/          —   makestrs-generated XmStrDefs*.c/.h
+├── examples/                  — demo applications
+│   ├── periodic/              —   Periodic Table of Widgets (MRM/UIL-based)
+│   ├── twm-periodic/          —   periodic.uid data for twm-session variant
+│   ├── widget-gallery/        —   self-contained widget gallery (no MRM)
+│   └── bindings/              —   Motif virtual key bindings (xmbind.alias + xmbind)
+├── ignored-area/              — gitignored; created by fetch-motif.sh + builds
+│   ├── motif-full/            —   upstream thentenaar/motif v2.5.2 (never modified)
+│   ├── third-party/motif/     —   staged source for cmake compilation
+│   ├── include/               —   X11 bitmaps symlinks
+│   └── tarballs/              —   cached tarball downloads
+├── public/                    — static assets served by Vite
 └── build/                     — gitignored; cmake build output
 ```
 
-Key distinction: `cmake/third-party/` holds CMakeLists.txt for third-party libraries (committed). Pre-generated files that upstream would normally produce via build tools are generated during `fetch-third-party.sh` — StringDefs.c/StringDefs.h/Shell.h are produced by compiling and running `util/makestrs` from the libXt tarball with the host C compiler. config.h is generated by running `emconfigure ./configure` against each package during the fetch, using `scripts/em-x11-config.cache` to pre-seed all autotools probes. `ignored-area/third-party/` holds the actual upstream source (gitignored).
+Key distinction: `native/` holds project-owned C code (config, stubs, generated files). `ignored-area/` holds upstream Motif source and build artifacts — nothing under `ignored-area/` is committed.
 
 ## Build
 
 ```
-pnpm build               # library only (cmake -DBUILD_EXAMPLES=OFF + host IIFE)
-pnpm build:examples      # library + all demos + demo site (cmake -DBUILD_EXAMPLES=ON + vite build)
+pnpm build         # Release build (libXm + all demos)
+pnpm build:debug   # Debug build
+pnpm dev           # Vite dev server (run manually from WSL terminal)
 ```
 
-## Adding a new third-party dependency
+`scripts/build.sh` auto-detects stale cmake caches and reconfigures when needed. It also rebuilds em-x11 (sibling directory) when its sources change.
 
-- Add an entry to the `LIBS` array in `scripts/fetch-third-party.sh`.
-- If it is a library, create `cmake/third-party/<name>/CMakeLists.txt`.
-- If it needs pre-generated files (files the upstream build tools would produce, like makestrs output), add generation logic to `fetch-third-party.sh` so they are produced during `pnpm install`. Do NOT check pre-generated files into git.
-- If it needs patching, put `.patch` files under `patches/<name>/`.
-- Add `add_subdirectory(ignored-area/third-party/<name>)` to root `CMakeLists.txt`.
+## Relationship to em-x11
+
+motif-wasm depends on em-x11 as a sibling directory (`../em-x11`). em-x11 provides:
+- The X11 client library (libX11) compiled to wasm
+- Xt, Xmu, Xpm, SM, ICE, Xext, Xft, Xrender, fontconfig wasm archives
+- The `cmake/em_x11_demo.cmake` module and port script
+- The twm window manager wasm binary
+- The browser host (canvas, input routing, compositor)
+
+Set `EM_X11_SRC` to override the default `../em-x11` path.
 
 ## Common pitfalls
 
-- **`.gitignore` uses anchored patterns.** `/third-party/` at root is now under `ignored-area/third-party/`; the entire `ignored-area/` tree is gitignored.
-- **CMake target names.** The core X11 static library target is `X11` (not `em_x11_static` — that was renamed). The CMakeLists.txt files under `cmake/third-party/` reference `X11` in their `target_link_libraries`.
-- **Demo CMakeLists reference paths.** The demo/examples CMakeLists files use `${CMAKE_SOURCE_DIR}/ignored-area/third-party/<name>` for source paths.
 - **Build must be done inside WSL.** cmake/emcc toolchain is only available there. Do not try to build from Windows.
-- **Do not modify files under `ignored-area/`.** They are regenerated by `fetch-third-party.sh`. Upstream changes go in `patches/`, the config cache at `scripts/em-x11-config.cache`, or by adding files to `native/`. Modifying third-party code is not allowed — any such modifications will be permanently discarded. You can only achieve your goals by modifying the source code of em-x11 itself. Nevertheless, overriding Emscripten's built-in functions (like `execvp`) is permitted when truly necessary, but should be a last resort.
-- **`references/` is strictly for reference only.** No build script, fetcher, CMakeLists, or test helper may depend on or read from `references/`. Pre-generated files must be produced by `fetch-third-party.sh` during `pnpm install`, not checked into git.
+- **Do not modify files under `ignored-area/`.** Upstream Motif source lives there and is regenerated by `fetch-motif.sh`. Changes should go in `native/` or via patches in `scripts/fetch-motif.sh`.
+- **`.gitignore` uses `*.uid` and `*.wasm` patterns.** Generated UID and wasm files are never committed. The build regenerates them.
+- **`pnpm install` needs `pnpm approve-builds` first** on pnpm 11+ (esbuild postinstall is blocked by default).
+- **The wasm `uil` compiler exists because sizeof(long)=4.** System (64-bit) uil produces UID files incompatible with the wasm MRM reader. Our wasm uil matches the wasm ABI exactly.
