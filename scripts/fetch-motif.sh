@@ -148,35 +148,6 @@ else:
   log "motif source staged"
 fi
 
-# --- Compile periodic UIL -> UID (output stays in our project) ---
-# Uses our own wasm uil (built via cmake) instead of the system (64-bit) uil,
-# so that sizeof(long)=4 and the UID file is byte-compatible with the
-# wasm MRM reader.
-
-PERIODIC_SRC_DIR="$STAGED_MOTIF/demos/programs/periodic"
-PERIODIC_OUT_DIR="$REPO_ROOT/examples/twm-periodic"
-WASM_UIL="$REPO_ROOT/build/artifacts/uil.cjs"
-
-if [ -d "$PERIODIC_SRC_DIR" ]; then
-  log "compiling periodic UIL -> UID (via wasm uil)"
-  if [ ! -f "$WASM_UIL" ]; then
-    warn "wasm uil not found at $WASM_UIL -- skipping UID generation (CMakeLists.txt will build uil and generate periodic.uid)"
-  else
-    if ! command -v node >/dev/null 2>&1; then
-      die "node not found. Node.js is required to run the wasm uil compiler."
-    fi
-    mkdir -p "$PERIODIC_OUT_DIR"
-
-    node "$WASM_UIL" \
-      -o "$PERIODIC_OUT_DIR/periodic.uid" \
-      "$PERIODIC_SRC_DIR/periodic.uil" \
-      "-I$PERIODIC_SRC_DIR" \
-      "-I$STAGED_MOTIF/lib/Xm" 2>&1 || warn "UIL compilation failed"
-  fi
-else
-  warn "periodic demo not found at $PERIODIC_SRC_DIR"
-fi
-
 # --- Stage X11 bitmaps from em-x11 ---
 #
 # Motif IconButton.c / I18List.c include <X11/bitmaps/gray> etc.

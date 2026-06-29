@@ -46,7 +46,6 @@ motif-wasm/
 │   └── generated/Xm/          —   makestrs-generated XmStrDefs*.c/.h
 ├── examples/                  — demo applications
 │   ├── periodic/              —   Periodic Table of Widgets (MRM/UIL-based)
-│   ├── twm-periodic/          —   periodic.uid data for twm-session variant
 │   ├── widget-gallery/        —   self-contained widget gallery (no MRM)
 │   └── bindings/              —   Motif virtual key bindings (xmbind.alias + xmbind)
 ├── ignored-area/              — gitignored; created by fetch-motif.sh + builds

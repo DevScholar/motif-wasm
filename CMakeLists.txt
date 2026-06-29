@@ -288,7 +288,6 @@ add_custom_command(
     COMMAND ${NODE_EXE} "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
         -o "${PERIODIC_UID}"
         "${PERIODIC_UIL}"
-        "-I${CMAKE_SOURCE_DIR}/examples/twm-periodic"
         "-I${MOTIF_SRC}/lib/Xm"
         "-I${MOTIF_SRC}/demos/programs/periodic"
     DEPENDS "${CMAKE_BINARY_DIR}/artifacts/uil.cjs"
