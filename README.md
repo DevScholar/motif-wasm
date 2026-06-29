@@ -1,6 +1,8 @@
-# motif-wasm
+# MotifWasm
 
 OpenMotif 2.3.8 (libXm) compiled to WebAssembly via em-x11, with the classic Periodic Table of Widgets demo.
+
+![Periodic Screenshot](screenshots/periodic.png)
 
 ## Quick start
 
