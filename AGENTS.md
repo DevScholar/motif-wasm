@@ -40,9 +40,6 @@ motif-wasm/
 │   └── *.py                   — UID/wasm analysis utilities
 ├── native/                    — project-owned C sources
 │   ├── config.h               —   HAVE_* defines for wasm32
-│   ├── motif_xlib_stubs.c     —   Xlib stubs needed by Motif demos
-│   ├── uil_x11_stubs.c        —   X11 stubs needed by wasm uil compiler
-│   ├── include/X11/Xft/       —   shadow Xft.h (before em-x11's)
 │   └── generated/Xm/          —   makestrs-generated XmStrDefs*.c/.h
 ├── examples/                  — demo applications
 │   ├── periodic/              —   Periodic Table of Widgets (MRM/UIL-based)
@@ -57,7 +54,7 @@ motif-wasm/
 └── build/                     — gitignored; cmake build output
 ```
 
-Key distinction: `native/` holds project-owned C code (config, stubs, generated files). `ignored-area/` holds upstream Motif source and build artifacts — nothing under `ignored-area/` is committed.
+Key distinction: `native/` holds project-owned C code (config, generated files). `ignored-area/` holds upstream Motif source and build artifacts — nothing under `ignored-area/` is committed. All X11/Xft stubs have been moved into em-x11's libX11 source tree, following the x.org layout.
 
 ## Build
 

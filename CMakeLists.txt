@@ -144,7 +144,6 @@ target_include_directories(Xm
     PUBLIC
         "${CMAKE_BINARY_DIR}/include"           # generated Xm.h
         "${CMAKE_SOURCE_DIR}/native"            # our config.h
-        "${CMAKE_SOURCE_DIR}/native/include"    # shadow Xft.h (before em-x11)
         "${CMAKE_SOURCE_DIR}/native/generated"  # makestrs-generated XmStrDefs*.h
         "${MOTIF_SRC}/lib"                      # <Xm/Xm.h> → lib/Xm/Xm.h
         "${EM_X11_INCLUDE_DIR}"
@@ -232,9 +231,7 @@ list(REMOVE_ITEM UIL_SOURCES
     "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/clients/uil/UilParser.c"
 )
 
-add_executable(uil ${UIL_SOURCES}
-    "${CMAKE_SOURCE_DIR}/native/uil_x11_stubs.c"
-)
+add_executable(uil ${UIL_SOURCES})
 
 target_include_directories(uil PRIVATE
     "${CMAKE_SOURCE_DIR}/ignored-area/motif-full/clients/uil"  # UilDefI.h etc.
@@ -253,6 +250,9 @@ target_compile_options(uil PRIVATE -w -g)
 # Node.js command-line tool: access real filesystem, exit after main()
 # Link against Xm + em-x11 prebuilt archives (Xt, X11, etc.)
 # Uses the same port script as the browser demos, but with Node.js settings.
+# ERROR_ON_UNDEFINED_SYMBOLS=0: uil is a CLI compiler that never opens a
+# display; several Xlib/Xft symbols referenced by libXm are stubbed (see
+# uil_x11_stubs.c) and won't be called at runtime.
 target_link_libraries(uil PRIVATE Xm)
 target_link_options(uil PRIVATE
     "SHELL:--use-port=${EM_X11_SRC_ABSOLUTE}/tools/ports/em_x11.py"
@@ -364,7 +364,6 @@ if(BUILD_EXAMPLES)
 
     add_executable(periodic
         "${CMAKE_SOURCE_DIR}/examples/periodic/periodic.c"
-        "${CMAKE_SOURCE_DIR}/native/motif_xlib_stubs.c"
     )
 
     target_include_directories(periodic PRIVATE
@@ -400,7 +399,6 @@ if(BUILD_EXAMPLES)
 
     add_executable(widget-gallery
         "${CMAKE_SOURCE_DIR}/examples/widget-gallery/gallery.c"
-        "${CMAKE_SOURCE_DIR}/native/motif_xlib_stubs.c"
     )
 
     target_include_directories(widget-gallery PRIVATE

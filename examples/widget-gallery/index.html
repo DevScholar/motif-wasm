@@ -4,15 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Motif Widget Gallery</title>
-    <link rel="icon" href="data:," />
   </head>
   <body>
-    <script type="module">
-      const factory = (await import('/artifacts/widget-gallery/widget-gallery.js')).default;
-      await factory({
-        thisProgram: 'widget-gallery',
-        locateFile: (path) => `/artifacts/widget-gallery/${path}`,
-      });
-    </script>
+    <script type="module" src="./main.ts"></script>
   </body>
 </html>

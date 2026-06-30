@@ -24,17 +24,22 @@ function serveBuildArtifactsRaw(): Plugin {
         if (!pathname.startsWith("/artifacts/")) return next();
         const filePath = resolve(__dirname, "build" + pathname);
         if (!existsSync(filePath)) return next();
-        const ext = pathname.split(".").pop()?.toLowerCase();
-        const mimeTypes: Record<string, string> = {
-          html: "text/html",
-          js: "application/javascript",
-          wasm: "application/wasm",
-          data: "application/octet-stream",
-        };
-        res.setHeader("Content-Type", mimeTypes[ext ?? ""] ?? "application/octet-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.statusCode = 200;
-        res.end(readFileSync(filePath));
+        try {
+          const ext = pathname.split(".").pop()?.toLowerCase();
+          const mimeTypes: Record<string, string> = {
+            html: "text/html",
+            js: "application/javascript",
+            wasm: "application/wasm",
+            data: "application/octet-stream",
+          };
+          res.setHeader("Content-Type", mimeTypes[ext ?? ""] ?? "application/octet-stream");
+          res.setHeader("Cache-Control", "no-cache");
+          res.statusCode = 200;
+          res.end(readFileSync(filePath));
+        } catch {
+          res.statusCode = 404;
+          res.end("Not found");
+        }
       });
     },
   };

@@ -197,7 +197,15 @@ if [ -f "$MAKESTRS_SRC" ]; then
     cp "$STRDEFS_DIR/XmStrDefsI.ht"  "$GEN_DIR/"
     cp "$STRDEFS_DIR/xmstring.list.in" "$GEN_DIR/xmstring.list"
 
-    (cd "$GEN_DIR" && "$MAKESTRS_BIN" -f xmstring.list > XmStrDefs.c 2>/dev/null) || true
+    if (cd "$GEN_DIR" && "$MAKESTRS_BIN" -f xmstring.list > XmStrDefs.c 2>/dev/null); then
+      if [ -s "$GEN_DIR/XmStrDefs.c" ]; then
+        log "makestrs generated XmStrDefs.c ($(wc -l < "$GEN_DIR/XmStrDefs.c") lines)"
+      else
+        warn "makestrs ran but produced empty XmStrDefs.c"
+      fi
+    else
+      warn "makestrs failed (exit code $?) — header stubs will be generated from .ht templates"
+    fi
 
     for _stem in XmStrDefs XmStrDefs22 XmStrDefs23 XmStrDefs25 XmStrDefsI; do
       if [ ! -f "$GEN_DIR/${_stem}.h" ] || [ ! -s "$GEN_DIR/${_stem}.h" ]; then
