@@ -1,5 +1,7 @@
 # MotifWasm
 
+⚠️ This project is in early development and is not yet stable. Expect breaking changes and missing features.
+
 OpenMotif (libXm) compiled to WebAssembly via [EmX11](https://github.com/DevScholar/em-x11), with the classic Periodic Table of Widgets demo. Based on [thentenaar/motif](https://github.com/thentenaar/motif).
 
 ![Periodic Screenshot](screenshots/periodic.png)
